@@ -8,13 +8,17 @@ import logging
 import os
 from azure.synapse.artifacts.models import (LinkedService, Dataset, PipelineResource, RunFilterParameters,
                                             Trigger, DataFlow, BigDataPoolReference, NotebookSessionProperties,
-                                            NotebookResource, SparkJobDefinition, NotebookFolder)
+                                            NotebookResource, SparkJobDefinition, SqlScriptResource, SqlScriptFolder,
+                                            SqlScriptContent, SqlScriptMetadata, SqlScript, SqlConnection,
+                                            NotebookFolder, LinkConnectionResource, LinkTableRequest,
+                                            QueryTableStatusRequest, SecureString)
 from azure.cli.core.util import sdk_no_wait, CLIError
 from azure.core.exceptions import ResourceNotFoundError
 from .._client_factory import (cf_synapse_linked_service, cf_synapse_dataset, cf_synapse_pipeline,
                                cf_synapse_pipeline_run, cf_synapse_trigger, cf_synapse_trigger_run,
                                cf_synapse_data_flow, cf_synapse_notebook, cf_synapse_spark_pool,
-                               cf_synapse_spark_job_definition, cf_synapse_library)
+                               cf_synapse_spark_job_definition, cf_synapse_library, cf_synapse_sql_script,
+                               cf_synapse_link_connection)
 from ..constant import EXECUTOR_SIZE, SPARK_SERVICE_ENDPOINT_API_VERSION
 
 
@@ -247,7 +251,7 @@ def create_or_update_notebook(cmd, workspace_name, definition_file, notebook_nam
                                                                          executor_memory=options['memory'],
                                                                          executor_cores=options['cores'],
                                                                          num_executors=executor_count)
-        definition_file['folder'] = NotebookFolder(name=folder_path)
+    definition_file['folder'] = NotebookFolder(name=folder_path)
     properties = NotebookResource(name=notebook_name, properties=definition_file)
     return sdk_no_wait(no_wait, client.begin_create_or_update_notebook,
                        notebook_name, properties, polling=True)
@@ -390,7 +394,7 @@ def upload_workspace_package(cmd, workspace_name, package, progress_callback=Non
             if data == b'':
                 break
 
-            client.append(package_name, data)
+            client.append('appendblock', package_name, data)
             index += len(data)
             if progress_callback is not None:
                 progress_callback(index, package_size)
@@ -465,3 +469,161 @@ def create_or_update_spark_job_definition(cmd, workspace_name, spark_job_definit
     properties = SparkJobDefinition.from_dict(definition_file)
     return sdk_no_wait(no_wait, client.begin_create_or_update_spark_job_definition,
                        spark_job_definition_name, properties, polling=True)
+
+
+def list_sql_scripts(cmd, workspace_name):
+    client = cf_synapse_sql_script(cmd.cli_ctx, workspace_name)
+    return client.get_sql_scripts_by_workspace()
+
+
+def get_sql_script(cmd, workspace_name, sql_script_name):
+    client = cf_synapse_sql_script(cmd.cli_ctx, workspace_name)
+    return client.get_sql_script(sql_script_name)
+
+
+def delete_sql_script(cmd, workspace_name, sql_script_name, no_wait=False):
+    client = cf_synapse_sql_script(cmd.cli_ctx, workspace_name)
+    return sdk_no_wait(no_wait, client.begin_delete_sql_script, sql_script_name, polling=True)
+
+
+def create_sql_script(cmd, workspace_name, sql_script_name, definition_file, result_limit=5000,
+                      folder_name=None, description=None, sql_pool_name=None,
+                      sql_database_name=None, additional_properties=None, no_wait=False):
+    client = cf_synapse_sql_script(cmd.cli_ctx, workspace_name)
+    try:
+        with open(definition_file, 'r') as stream:
+            query = stream.read()
+    except:
+        from azure.cli.core.azclierror import InvalidArgumentValueError
+        err_msg = 'Definition file path is invalid'
+        raise InvalidArgumentValueError(err_msg)
+    if sql_pool_name:
+        if sql_pool_name.lower() == 'built-in':
+            sql_pool_type = 'SqlOnDemand'
+            current_connection = SqlConnection(type=sql_pool_type,
+                                               pool_name='Built-in',
+                                               database_name=sql_database_name)
+        else:
+            sql_pool_type = 'SqlPool'
+            current_connection = SqlConnection(type=sql_pool_type,
+                                               pool_name=sql_pool_name,
+                                               database_name=sql_database_name)
+    else:
+        current_connection = SqlConnection(type='SqlOnDemand',
+                                           pool_name='Built-in',
+                                           database_name='master')
+
+    sql_script_content = SqlScriptContent(query=query,
+                                          current_connection=current_connection,
+                                          result_limit=result_limit,
+                                          metadata=SqlScriptMetadata(language='sql'))
+    sql_script_folder = SqlScriptFolder(name=folder_name)
+    properties = SqlScript(additional_properties=additional_properties,
+                           description=description,
+                           type='SqlQuery',
+                           content=sql_script_content,
+                           folder=sql_script_folder)
+    sql_script = SqlScriptResource(name=sql_script_name, properties=properties)
+    return sdk_no_wait(no_wait, client.begin_create_or_update_sql_script,
+                       sql_script_name, sql_script, polling=True)
+
+
+def export_sql_script(cmd, workspace_name, output_folder, sql_script_name=None):
+    client = cf_synapse_sql_script(cmd.cli_ctx, workspace_name)
+    if sql_script_name is not None:
+        sql_script_query = client.get_sql_script(sql_script_name).properties.content.query
+        path = os.path.join(output_folder, sql_script_name + '.sql')
+        try:
+            with open(path, 'w') as f:
+                f.write(sql_script_query)
+            print(sql_script_name + 'export success')
+        except:
+            from azure.cli.core.azclierror import InvalidArgumentValueError
+            err_msg = 'Unable to export to file: {}'.format(path)
+            raise InvalidArgumentValueError(err_msg)
+    else:
+        sql_scripts = client.get_sql_scripts_by_workspace()
+        for sql_script in sql_scripts:
+            sql_script_query = client.get_sql_script(sql_script.name).properties.content.query
+            path = os.path.join(output_folder, sql_script.name + '.sql')
+            try:
+                with open(path, 'w') as f:
+                    f.write(sql_script_query)
+                print(sql_script.name + 'export success')
+            except:
+                from azure.cli.core.azclierror import InvalidArgumentValueError
+                err_msg = 'Unable to export to file: {}'.format(path)
+                raise InvalidArgumentValueError(err_msg)
+
+
+def list_link_connection(cmd, workspace_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.list_by_workspace()
+
+
+def get_link_connection(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.get(link_connection_name)
+
+
+def create_or_update_link_connection(cmd, workspace_name, link_connection_name, definition_file):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    info = definition_file['properties']
+    properties_file = {}
+    properties_file['sourceDatabase'] = info['sourceDatabase']
+    properties_file['targetDatabase'] = info['targetDatabase']
+    properties_file['compute'] = info['compute']
+    if 'landingZone' in properties_file:
+        properties_file['landingZone'] = info['landingZone']
+    properties = LinkConnectionResource(properties=properties_file)
+    return client.create_or_update(link_connection_name, properties)
+
+
+def delete_link_connection(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.delete(link_connection_name)
+
+
+def get_link_connection_status(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.get_detailed_status(link_connection_name)
+
+
+def start_link_connection(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.start(link_connection_name)
+
+
+def stop_link_connection(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.stop(link_connection_name)
+
+
+def synapse_list_link_table(cmd, workspace_name, link_connection_name):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    return client.list_link_tables(link_connection_name).value
+
+
+def synapse_edit_link_table(cmd, workspace_name, link_connection_name, definition_file):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    linkTableRequset_list = []
+    for i in range(0, len(definition_file['linkTables'])):
+        linkTableRequset = LinkTableRequest.from_dict(definition_file['linkTables'][i])
+        linkTableRequset_list.append(linkTableRequset)
+    return client.edit_tables(link_connection_name, linkTableRequset_list)
+
+
+def synapse_get_link_tables_status(cmd, workspace_name, link_connection_name, max_segment_count=50,
+                                   continuation_token=None):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    query_table_status_request = QueryTableStatusRequest(
+        max_segment_count=max_segment_count,
+        continuation_token=continuation_token
+    )
+    return client.query_table_status(link_connection_name, query_table_status_request)
+
+
+def synapse_update_landing_zone_credential(cmd, workspace_name, link_connection_name, sas_token):
+    client = cf_synapse_link_connection(cmd.cli_ctx, workspace_name)
+    sas_tokens = SecureString(value=sas_token)
+    return client.update_landing_zone_credential(link_connection_name, sas_tokens)

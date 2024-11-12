@@ -9,7 +9,9 @@ from .action import (
     AddSecretAuthInfoAuto,
     AddUserAssignedIdentityAuthInfo,
     AddSystemAssignedIdentityAuthInfo,
-    AddServicePrincipalAuthInfo
+    AddServicePrincipalAuthInfo,
+    AddUserAccountAuthInfo,
+    AddWorkloadIdentityAuthInfo
 )
 # pylint: disable=line-too-long
 
@@ -17,8 +19,14 @@ from .action import (
 # The dict defines the resource types, including both source resources and target resources.
 # The enum value will be used in command name
 class RESOURCE(Enum):
+    Local = 'connection'
     WebApp = 'webapp'
-    SpringCloud = 'spring-cloud'
+    FunctionApp = 'functionapp'
+    # `az spring-cloud` migrated to `az spring`
+    SpringCloud = 'spring'
+    SpringCloudDeprecated = 'spring-cloud'
+    KubernetesCluster = 'aks'
+    ContainerApp = 'containerapp'
     CosmosCassandra = 'cosmos-cassandra'
     CosmosGremlin = 'cosmos-gremlin'
     CosmosMongo = 'cosmos-mongo'
@@ -32,15 +40,27 @@ class RESOURCE(Enum):
     PostgresFlexible = 'postgres-flexible'
     Mysql = 'mysql'
     MysqlFlexible = 'mysql-flexible'
-    # Sql = 'sql'
-    # Redis = 'redis'
-    # RedisEnterprise = 'redis-enterprise'
+    Sql = 'sql'
+    Redis = 'redis'
+    RedisEnterprise = 'redis-enterprise'
     KeyVault = 'keyvault'
-    # EventHub = 'eventhub'
-    # AppConfig = 'appconfig'
-    # ServiceBus = 'servicebus'
+    EventHub = 'eventhub'
+    AppConfig = 'appconfig'
+    ServiceBus = 'servicebus'
     SignalR = 'signalr'
+    WebPubSub = 'webpubsub'
     ConfluentKafka = 'confluent-cloud'
+    FabricSql = 'fabric-sql'
+    AppInsights = 'app-insights'
+    CognitiveServices = 'cognitiveservices'
+
+    @classmethod
+    def value_of(cls, value):
+        for _, v in cls.__members__.items():
+            if v.value == value:
+                return v
+
+        raise ValueError(f"'{cls.__name__}' enum not found for '{value}'")
 
 
 # The dict defines the auth types
@@ -49,12 +69,17 @@ class AUTH_TYPE(Enum):
     SecretAuto = 'secret(auto)'  # secret which don't need user provide name & password
     SystemIdentity = 'system-managed-identity'
     UserIdentity = 'user-managed-identity'
+    WorkloadIdentity = 'workload-identity'
     ServicePrincipalSecret = 'service-principal'
+    UserAccount = 'user-account'
+    Null = 'null'
 
 
 # The dict defines the client types
 class CLIENT_TYPE(Enum):
     Dotnet = 'dotnet'
+    DotnetConnectionString = 'dotnet-connectionString'
+    DotnetInternal = 'dotnet-internal'
     Java = 'java'
     Nodejs = 'nodejs'
     Python = 'python'
@@ -62,22 +87,39 @@ class CLIENT_TYPE(Enum):
     Php = 'php'
     Ruby = 'ruby'
     SpringBoot = 'springBoot'
+    KafkaSpringBoot = 'kafka-springBoot'
     Django = 'django'
     Blank = 'none'
 
 
 # The source resources released as CLI extensions
-SOURCE_RESOURCES_IN_EXTENSION = [RESOURCE.SpringCloud]
+SOURCE_RESOURCES_IN_EXTENSION = [RESOURCE.SpringCloud, RESOURCE.SpringCloudDeprecated]
+
+# The source resources using user token
+SOURCE_RESOURCES_USERTOKEN = [RESOURCE.KubernetesCluster]
 
 # The target resources using user token
 TARGET_RESOURCES_USERTOKEN = [RESOURCE.PostgresFlexible, RESOURCE.MysqlFlexible, RESOURCE.KeyVault]
 
+# The target resources could be set to connection string
+TARGET_RESOURCES_CONNECTION_STRING = [RESOURCE.Sql, RESOURCE.Mysql, RESOURCE.MysqlFlexible, RESOURCE.Postgres, RESOURCE.PostgresFlexible]
+
+# The target resources to be deprecated
+TARGET_RESOURCES_DEPRECATED = [RESOURCE.Mysql, RESOURCE.Postgres]
+
 # The dict defines the resource id pattern of source resources.
 SOURCE_RESOURCES = {
     RESOURCE.WebApp: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.Web/sites/{site}',
-    RESOURCE.SpringCloud: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.AppPlatform/Spring/{spring}/apps/{app}/deployments/{deployment}'
+    RESOURCE.FunctionApp: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.Web/sites/{site}',
+    RESOURCE.SpringCloud: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.AppPlatform/Spring/{spring}/apps/{app}',
+    RESOURCE.SpringCloudDeprecated: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.AppPlatform/Spring/{spring}/apps/{app}/deployments/{deployment}',
+    RESOURCE.KubernetesCluster: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.ContainerService/managedClusters/{cluster}',
+    RESOURCE.ContainerApp: '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.App/containerApps/{app}'
 }
 
+WEB_APP_SLOT_RESOURCE = '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.Web/sites/{site}/slots/{slot}'
+SPRING_APP_DEPLOYMENT_RESOURCE = '/subscriptions/{subscription}/resourceGroups/{source_resource_group}/providers/Microsoft.AppPlatform/Spring/{spring}/apps/{app}/deployments/{deployment}'
+LOCAL_CONNECTION_RESOURCE = '/subscriptions/{subscriptionId}/resourceGroups/{resource_group}/providers/Microsoft.ServiceLinker/locations/{location}/connectors/{connection_name}'
 
 # The dict defines the resource id pattern of target resources.
 TARGET_RESOURCES = {
@@ -85,9 +127,9 @@ TARGET_RESOURCES = {
     RESOURCE.PostgresFlexible: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.DBforPostgreSQL/flexibleServers/{server}/databases/{database}',
     RESOURCE.MysqlFlexible: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.DBforMySQL/flexibleServers/{server}/databases/{database}',
     RESOURCE.Mysql: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.DBForMySQL/servers/{server}/databases/{database}',
-    # RESOURCE.Sql: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Sql/servers/{server}/databases/{database}',
-    # RESOURCE.Redis: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Cache/redis/{server}/databases/{database}',
-    # RESOURCE.RedisEnterprise: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Cache/redisEnterprise/{server}/databases/{database}',
+    RESOURCE.Sql: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Sql/servers/{server}/databases/{database}',
+    RESOURCE.Redis: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Cache/redis/{server}/databases/{database}',
+    RESOURCE.RedisEnterprise: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Cache/redisEnterprise/{server}/databases/{database}',
 
     RESOURCE.CosmosCassandra: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.DocumentDB/databaseAccounts/{account}/cassandraKeyspaces/{key_space}',
     RESOURCE.CosmosGremlin: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.DocumentDB/databaseAccounts/{account}/gremlinDatabases/{database}/graphs/{graph}',
@@ -101,31 +143,85 @@ TARGET_RESOURCES = {
     RESOURCE.StorageTable: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.Storage/storageAccounts/{account}/tableServices/default',
 
     RESOURCE.KeyVault: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.KeyVault/vaults/{vault}',
-    # RESOURCE.AppConfig: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.AppConfiguration/configurationStores/{config_store}',
-    # RESOURCE.EventHub: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.EventHub/namespaces/{namespace}',
-    # RESOURCE.ServiceBus: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.ServiceBus/namespaces/{namespace}',
+    RESOURCE.AppConfig: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.AppConfiguration/configurationStores/{config_store}',
+    RESOURCE.EventHub: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.EventHub/namespaces/{namespace}',
+    RESOURCE.ServiceBus: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.ServiceBus/namespaces/{namespace}',
     RESOURCE.SignalR: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.SignalRService/SignalR/{signalr}',
+    RESOURCE.WebPubSub: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.SignalRService/WebPubSub/{webpubsub}',
     RESOURCE.ConfluentKafka: '#',  # special target resource, no arm resource id
+    RESOURCE.AppInsights: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/microsoft.insights/components/{appinsights}',
+
+    RESOURCE.CognitiveServices: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.CognitiveServices/accounts/{account}',
+
+    RESOURCE.ContainerApp: '/subscriptions/{subscription}/resourceGroups/{target_resource_group}/providers/Microsoft.App/containerApps/{target_app_name}',
+
+    RESOURCE.FabricSql: 'https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/SqlDatabases/{sql_id}'
 }
 
 
+LOCAL_CONNECTION_PARAMS = {
+    'connection_name': {
+        'options': ['--connection'],
+        'type': str,
+        'help': 'Name of the connection.',
+    },
+    'resource_group_name': {
+        'options': ['--resource-group', '-g'],
+        'help': 'The resource group which contains the connection.'
+    },
+    'location': {
+    }
+}
 # The dict defines the parameters used to position the source resources.
 # The parmaters should include all variables defined in source resource id expect
 # for 'subscription', which will be dealt by CLI core as a default parameter.
 SOURCE_RESOURCES_PARAMS = {
     RESOURCE.WebApp: {
         'source_resource_group': {
+            'configured_default': 'group',
             'options': ['--resource-group', '-g'],
             'help': 'The resource group which contains the webapp',
             'placeholder': 'WebAppRG'
         },
         'site': {
+            'configured_default': 'web',
             'options': ['--name', '-n'],
             'help': 'Name of the webapp',
             'placeholder': 'MyWebApp'
         }
     },
+    RESOURCE.FunctionApp: {
+        'source_resource_group': {
+            'configured_default': 'group',
+            'options': ['--resource-group', '-g'],
+            'help': 'The resource group which contains the function app',
+            'placeholder': 'FuncAppRG'
+        },
+        'site': {
+            'configured_default': 'web',
+            'options': ['--name', '-n'],
+            'help': 'Name of the function app',
+            'placeholder': 'MyFunctionApp'
+        }
+    },
     RESOURCE.SpringCloud: {
+        'source_resource_group': {
+            'options': ['--resource-group', '-g'],
+            'help': 'The resource group which contains app in the Azure Spring Apps',
+            'placeholder': 'SpringCloudRG'
+        },
+        'spring': {
+            'options': ['--service'],
+            'help': 'Name of the the Azure Spring Apps resource',
+            'placeholder': 'MySpringService'
+        },
+        'app': {
+            'options': ['--app'],
+            'help': 'Name of the app in the Azure Spring Apps',
+            'placeholder': 'MyApp'
+        },
+    },
+    RESOURCE.SpringCloudDeprecated: {
         'source_resource_group': {
             'options': ['--resource-group', '-g'],
             'help': 'The resource group which contains the spring-cloud',
@@ -144,11 +240,64 @@ SOURCE_RESOURCES_PARAMS = {
         'deployment': {
             'options': ['--deployment'],
             'help': 'The deployment name of the app',
-            'placeholder': 'MyDeployment'
+            'placeholder': 'MyDeployment',
+        }
+    },
+    RESOURCE.KubernetesCluster: {
+        'source_resource_group': {
+            'options': ['--resource-group', '-g'],
+            'help': 'The resource group which contains the managed cluster',
+            'placeholder': 'ClusterRG'
+        },
+        'cluster': {
+            'options': ['--name', '-n'],
+            'help': 'Name of the managed cluster',
+            'placeholder': 'MyCluster'
+        }
+    },
+    RESOURCE.ContainerApp: {
+        'source_resource_group': {
+            'options': ['--resource-group', '-g'],
+            'help': 'The resource group which contains the container app',
+            'placeholder': 'ContainerAppRG'
+        },
+        'app': {
+            'options': ['--name', '-n'],
+            'help': 'Name of the container app',
+            'placeholder': 'MyContainerApp'
         }
     }
 }
 
+
+# The dict defines the required parameters used in the source resources for creation.
+SOURCE_RESOURCES_CREATE_PARAMS = {
+    RESOURCE.ContainerApp: {
+        'scope': {
+            'options': ['--container', '-c'],
+            'help': 'The container where the connection information will be saved (as environment variables).',
+            'placeholder': 'MyContainer'
+        },
+    },
+}
+
+# The dict defines the optional parameters used in the source resources for WebApp creation.
+SOURCE_RESOURCES_OPTIONAL_PARAMS = {
+    RESOURCE.WebApp: {
+        'slot': {
+            'options': ['--slot'],
+            'help': 'The name of the slot. Default to the production slot if not specified.',
+            'placeholder': 'WebAppSlot'
+        },
+    },
+    RESOURCE.SpringCloud: {
+        'deployment': {
+            'options': ['--deployment'],
+            'help': 'The deployment name of the app.',
+            'placeholder': 'MyDeployment',
+        },
+    }
+}
 
 # The dict defines the parameters used to position the target resources.
 # The parmaters should include all variables defined in target resource id expect
@@ -222,57 +371,58 @@ TARGET_RESOURCES_PARAMS = {
             'placeholder': 'MyDB'
         }
     },
-    # RESOURCE.Sql: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the sql server',
-    #         'placeholder': 'SqlRG'
-    #     },
-    #     'server': {
-    #         'options': ['--server'],
-    #         'help': 'Name of the sql server',
-    #         'placeholder': 'MyServer'
-    #     },
-    #     'database': {
-    #         'options': ['--database'],
-    #         'help': 'Name of the sql database',
-    #         'placeholder': 'MyDB'
-    #     }
-    # },
-    # RESOURCE.Redis: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the redis server',
-    #         'placeholder': 'RedisRG'
-    #     },
-    #     'server': {
-    #         'options': ['--server'],
-    #         'help': 'Name of the redis server',
-    #         'placeholder': 'MyServer'
-    #     },
-    #     'database': {
-    #         'options': ['--database'],
-    #         'help': 'Name of the redis database',
-    #         'placeholder': 'MyDB'
-    #     }
-    # },
-    # RESOURCE.RedisEnterprise: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the redis server',
-    #         'placeholder': 'RedisRG'
-    #     },
-    #     'server': {
-    #         'options': ['--server'],
-    #         'help': 'Name of the redis enterprise server',
-    #         'placeholder': 'MyServer'
-    #     },
-    #     'database': {
-    #         'options': ['--database'],
-    #         'help': 'Name of the redis enterprise database',
-    #         'placeholder': 'MyDB'
-    #     }
-    # },
+    RESOURCE.Sql: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the sql server',
+            'placeholder': 'SqlRG'
+        },
+        'server': {
+            'configured_default': 'sql-server',
+            'options': ['--server'],
+            'help': 'Name of the sql server',
+            'placeholder': 'MyServer'
+        },
+        'database': {
+            'options': ['--database'],
+            'help': 'Name of the sql database',
+            'placeholder': 'MyDB'
+        }
+    },
+    RESOURCE.Redis: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the redis server',
+            'placeholder': 'RedisRG'
+        },
+        'server': {
+            'options': ['--server'],
+            'help': 'Name of the redis server',
+            'placeholder': 'MyServer'
+        },
+        'database': {
+            'options': ['--database'],
+            'help': 'Name of the redis database',
+            'placeholder': 'MyDB'
+        }
+    },
+    RESOURCE.RedisEnterprise: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the redis server',
+            'placeholder': 'RedisRG'
+        },
+        'server': {
+            'options': ['--server'],
+            'help': 'Name of the redis enterprise server',
+            'placeholder': 'MyServer'
+        },
+        'database': {
+            'options': ['--database'],
+            'help': 'Name of the redis enterprise database',
+            'placeholder': 'MyDB'
+        }
+    },
     RESOURCE.CosmosCassandra: {
         'target_resource_group': {
             'options': ['--target-resource-group', '--tg'],
@@ -423,42 +573,42 @@ TARGET_RESOURCES_PARAMS = {
             'placeholder': 'MyVault'
         }
     },
-    # RESOURCE.AppConfig: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the app configuration',
-    #         'placeholder': 'AppconfigRG'
-    #     },
-    #     'config_store': {
-    #         'options': ['--app-config'],
-    #         'help': 'Name of the app configuration',
-    #         'placeholder': 'MyConfigStore'
-    #     }
-    # },
-    # RESOURCE.EventHub: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the eventhub',
-    #         'placeholder': 'EventhubRG'
-    #     },
-    #     'namespace': {
-    #         'options': ['--namespace'],
-    #         'help': 'Name of the eventhub namespace',
-    #         'placeholder': 'MyNamespace'
-    #     }
-    # },
-    # RESOURCE.ServiceBus: {
-    #     'target_resource_group': {
-    #         'options': ['--target-resource-group', '--tg'],
-    #         'help': 'The resource group which contains the servicebus',
-    #         'placeholder': 'ServicebusRG'
-    #     },
-    #     'namespace': {
-    #         'options': ['--namespace'],
-    #         'help': 'Name of the servicebus namespace',
-    #         'placeholder': 'MyNamespace'
-    #     }
-    # },
+    RESOURCE.AppConfig: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the app configuration',
+            'placeholder': 'AppconfigRG'
+        },
+        'config_store': {
+            'options': ['--app-config'],
+            'help': 'Name of the app configuration',
+            'placeholder': 'MyConfigStore'
+        }
+    },
+    RESOURCE.EventHub: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the eventhub',
+            'placeholder': 'EventhubRG'
+        },
+        'namespace': {
+            'options': ['--namespace'],
+            'help': 'Name of the eventhub namespace',
+            'placeholder': 'MyNamespace'
+        }
+    },
+    RESOURCE.ServiceBus: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the servicebus',
+            'placeholder': 'ServicebusRG'
+        },
+        'namespace': {
+            'options': ['--namespace'],
+            'help': 'Name of the servicebus namespace',
+            'placeholder': 'MyNamespace'
+        }
+    },
     RESOURCE.SignalR: {
         'target_resource_group': {
             'options': ['--target-resource-group', '--tg'],
@@ -470,8 +620,102 @@ TARGET_RESOURCES_PARAMS = {
             'help': 'Name of the signalr service',
             'placeholder': 'MySignalR'
         }
+    },
+    RESOURCE.WebPubSub: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the webpubsub',
+            'placeholder': 'WebpubsubRG'
+        },
+        'webpubsub': {
+            'options': ['--webpubsub'],
+            'help': 'Name of the webpubsub service',
+            'placeholder': 'MyWebPubSub'
+        }
+    },
+    RESOURCE.AppInsights: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the app insights',
+            'placeholder': 'AppInsightsRG'
+        },
+        'appinsights': {
+            'options': ['--app-insights'],
+            'help': 'Name of the app insights',
+            'placeholder': 'MyAppInsights'
+        }
+    },
+    RESOURCE.CognitiveServices: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the cognitive services',
+            'placeholder': 'CognitiveServicesRG'
+        },
+        'account': {
+            'options': ['--account'],
+            'help': 'Name of the cognitive services account',
+            'placeholder': 'MyAccount'
+        }
+    },
+    RESOURCE.ContainerApp: {
+        'target_resource_group': {
+            'options': ['--target-resource-group', '--tg'],
+            'help': 'The resource group which contains the target container app',
+            'placeholder': 'TargetContainerAppRG'
+        },
+        'target_app_name': {
+            'options': ['--target-app-name'],
+            'help': 'Name of the target container app',
+            'placeholder': 'MyTargetContainerApp'
+        }
+    },
+    RESOURCE.FabricSql: {
     }
 }
+
+
+# The dict defines the targets which supports service endpoint
+TARGET_SUPPORT_SERVICE_ENDPOINT = [
+    RESOURCE.Postgres,
+    RESOURCE.Mysql,
+    RESOURCE.Sql,
+    RESOURCE.StorageBlob,
+    RESOURCE.StorageQueue,
+    RESOURCE.StorageFile,
+    RESOURCE.StorageTable,
+    RESOURCE.KeyVault,
+    RESOURCE.CosmosSql,
+    RESOURCE.CosmosCassandra,
+    RESOURCE.CosmosGremlin,
+    RESOURCE.CosmosMongo,
+    RESOURCE.CosmosTable,
+    RESOURCE.ServiceBus,
+    RESOURCE.EventHub,
+]
+
+
+TARGET_SUPPORT_PRIVATE_ENDPOINT = [
+    RESOURCE.AppConfig,
+    RESOURCE.CosmosSql,
+    RESOURCE.CosmosCassandra,
+    RESOURCE.CosmosGremlin,
+    RESOURCE.CosmosMongo,
+    RESOURCE.CosmosTable,
+    RESOURCE.Redis,
+    RESOURCE.Postgres,
+    RESOURCE.Mysql,
+    RESOURCE.MysqlFlexible,
+    RESOURCE.EventHub,
+    RESOURCE.KeyVault,
+    RESOURCE.SignalR,
+    RESOURCE.WebPubSub,
+    RESOURCE.Sql,
+    RESOURCE.StorageBlob,
+    RESOURCE.StorageQueue,
+    RESOURCE.StorageFile,
+    RESOURCE.StorageTable,
+    RESOURCE.ServiceBus,
+]
 
 
 # The dict defines the parameters used to provide auth info
@@ -504,11 +748,26 @@ AUTH_TYPE_PARAMS = {
             'action': AddUserAssignedIdentityAuthInfo
         }
     },
+    # used only as argument, same action as user identity
+    AUTH_TYPE.WorkloadIdentity: {
+        'workload_identity_auth_info': {
+            'options': ['--workload-identity'],
+            'help': 'The workload identity auth info',
+            'action': AddWorkloadIdentityAuthInfo
+        }
+    },
     AUTH_TYPE.ServicePrincipalSecret: {
         'service_principal_auth_info_secret': {
             'options': ['--service-principal'],
             'help': 'The service principal auth info',
             'action': AddServicePrincipalAuthInfo
+        }
+    },
+    AUTH_TYPE.UserAccount: {
+        'user_account_auth_info': {
+            'options': ['--user-account'],
+            'help': 'The local user account auth info',
+            'action': AddUserAccountAuthInfo
         }
     }
 }
@@ -517,14 +776,43 @@ AUTH_TYPE_PARAMS = {
 # The dict defines the supported auth type of each source-target resource pair
 # The first one will be used as the default auth type
 SUPPORTED_AUTH_TYPE = {
-    RESOURCE.WebApp: {
-        RESOURCE.Postgres: [AUTH_TYPE.Secret],
-        RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret],
+    RESOURCE.Local: {
+        RESOURCE.Postgres: [AUTH_TYPE.Secret, AUTH_TYPE.UserAccount],
+        RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.UserAccount],
         RESOURCE.Mysql: [AUTH_TYPE.Secret],
-        RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret],
-        # RESOURCE.Sql: [AUTH_TYPE.Secret],
-        # RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
-        # RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
+        RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.UserAccount],
+        RESOURCE.Sql: [AUTH_TYPE.Secret, AUTH_TYPE.UserAccount],
+        RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
+        RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CosmosCassandra: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosGremlin: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosMongo: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosTable: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosSql: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.StorageBlob: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageQueue: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageFile: [AUTH_TYPE.SecretAuto],
+        RESOURCE.StorageTable: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.KeyVault: [AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.AppConfig: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.EventHub: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ServiceBus: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.SignalR: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.WebPubSub: [AUTH_TYPE.SecretAuto, AUTH_TYPE.UserAccount, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ConfluentKafka: [AUTH_TYPE.Secret],
+        RESOURCE.AppInsights: [AUTH_TYPE.SecretAuto]
+    },
+    RESOURCE.WebApp: {
+        RESOURCE.Postgres: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Mysql: [AUTH_TYPE.Secret],
+        RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Sql: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
+        RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
 
         RESOURCE.CosmosCassandra: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.CosmosGremlin: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
@@ -535,42 +823,120 @@ SUPPORTED_AUTH_TYPE = {
         RESOURCE.StorageBlob: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.StorageQueue: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.StorageFile: [AUTH_TYPE.SecretAuto],
-        RESOURCE.StorageTable: [AUTH_TYPE.SecretAuto],
+        RESOURCE.StorageTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
 
         RESOURCE.KeyVault: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.AppConfig: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.EventHub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.ServiceBus: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.AppConfig: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.EventHub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ServiceBus: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.SignalR: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.WebPubSub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.ConfluentKafka: [AUTH_TYPE.Secret],
+        RESOURCE.FabricSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity],
+        RESOURCE.AppInsights: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CognitiveServices: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret]
     },
     RESOURCE.SpringCloud: {
+        RESOURCE.Postgres: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Mysql: [AUTH_TYPE.Secret],
+        RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Sql: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
+        RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CosmosCassandra: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosGremlin: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosMongo: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.StorageBlob: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageQueue: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageFile: [AUTH_TYPE.SecretAuto],
+        RESOURCE.StorageTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.KeyVault: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.AppConfig: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.EventHub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ServiceBus: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.SignalR: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.WebPubSub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ConfluentKafka: [AUTH_TYPE.Secret],
+        RESOURCE.FabricSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity],
+        RESOURCE.AppInsights: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CognitiveServices: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret]
+    },
+    RESOURCE.KubernetesCluster: {
         RESOURCE.Postgres: [AUTH_TYPE.Secret],
         RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret],
         RESOURCE.Mysql: [AUTH_TYPE.Secret],
         RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret],
-        # RESOURCE.Sql: [AUTH_TYPE.Secret],
-        # RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
-        # RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
+        RESOURCE.Sql: [AUTH_TYPE.Secret],
+        RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
+        RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
 
-        RESOURCE.CosmosCassandra: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
-        RESOURCE.CosmosGremlin: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
-        RESOURCE.CosmosMongo: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
-        RESOURCE.CosmosTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
-        RESOURCE.CosmosSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosCassandra: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosGremlin: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosMongo: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosTable: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosSql: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
 
-        RESOURCE.StorageBlob: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
-        RESOURCE.StorageQueue: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageBlob: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageQueue: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.StorageFile: [AUTH_TYPE.SecretAuto],
-        RESOURCE.StorageTable: [AUTH_TYPE.SecretAuto],
+        RESOURCE.StorageTable: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
 
-        RESOURCE.KeyVault: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.AppConfig: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.EventHub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
-        # RESOURCE.ServiceBus: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.KeyVault: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.AppConfig: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.EventHub: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ServiceBus: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.SignalR: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.WebPubSub: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret],
         RESOURCE.ConfluentKafka: [AUTH_TYPE.Secret],
-    }
+        RESOURCE.AppInsights: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CognitiveServices: [AUTH_TYPE.WorkloadIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.ServicePrincipalSecret]
+    },
+    RESOURCE.ContainerApp: {
+        RESOURCE.Postgres: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.PostgresFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Mysql: [AUTH_TYPE.Secret],
+        RESOURCE.MysqlFlexible: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Sql: [AUTH_TYPE.Secret, AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.Redis: [AUTH_TYPE.SecretAuto],
+        RESOURCE.RedisEnterprise: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CosmosCassandra: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosGremlin: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosMongo: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.CosmosSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.StorageBlob: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageQueue: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.StorageFile: [AUTH_TYPE.SecretAuto],
+        RESOURCE.StorageTable: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.KeyVault: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.AppConfig: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.EventHub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ServiceBus: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.SignalR: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.WebPubSub: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+        RESOURCE.ConfluentKafka: [AUTH_TYPE.Secret],
+        RESOURCE.FabricSql: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.UserIdentity],
+        RESOURCE.AppInsights: [AUTH_TYPE.SecretAuto],
+
+        RESOURCE.CognitiveServices: [AUTH_TYPE.SystemIdentity, AUTH_TYPE.SecretAuto, AUTH_TYPE.UserIdentity, AUTH_TYPE.ServicePrincipalSecret],
+
+        RESOURCE.ContainerApp: [AUTH_TYPE.Null]
+    },
 }
+SUPPORTED_AUTH_TYPE[RESOURCE.SpringCloudDeprecated] = SUPPORTED_AUTH_TYPE[RESOURCE.SpringCloud]
+SUPPORTED_AUTH_TYPE[RESOURCE.FunctionApp] = SUPPORTED_AUTH_TYPE[RESOURCE.WebApp]
 
 
 # The dict defines the supported client types of each source-target resource pair
@@ -579,6 +945,7 @@ SUPPORTED_CLIENT_TYPE = {
     RESOURCE.WebApp: {
         RESOURCE.Postgres: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
@@ -586,10 +953,12 @@ SUPPORTED_CLIENT_TYPE = {
             CLIENT_TYPE.Php,
             CLIENT_TYPE.Ruby,
             CLIENT_TYPE.Django,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.PostgresFlexible: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
@@ -597,10 +966,12 @@ SUPPORTED_CLIENT_TYPE = {
             CLIENT_TYPE.Php,
             CLIENT_TYPE.Ruby,
             CLIENT_TYPE.Django,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.Mysql: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
@@ -608,10 +979,12 @@ SUPPORTED_CLIENT_TYPE = {
             CLIENT_TYPE.Php,
             CLIENT_TYPE.Ruby,
             CLIENT_TYPE.Django,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.MysqlFlexible: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
@@ -619,240 +992,233 @@ SUPPORTED_CLIENT_TYPE = {
             CLIENT_TYPE.Php,
             CLIENT_TYPE.Ruby,
             CLIENT_TYPE.Django,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
-        # RESOURCE.Sql: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs,
-        #     CLIENT_TYPE.Go,
-        #     CLIENT_TYPE.Php,
-        #     CLIENT_TYPE.Ruby,
-        #     CLIENT_TYPE.Django,
-        #     CLIENT_TYPE.SpringBoot
-        # ],
-        # RESOURCE.Redis: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs,
-        #     CLIENT_TYPE.Go,
-        #     CLIENT_TYPE.SpringBoot
-        # ],
-        # RESOURCE.RedisEnterprise: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs,
-        #     CLIENT_TYPE.Go,
-        #     CLIENT_TYPE.SpringBoot
-        # ],
-        RESOURCE.CosmosCassandra: [
+        RESOURCE.Sql: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
             CLIENT_TYPE.Go,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.Php,
+            CLIENT_TYPE.Ruby,
+            CLIENT_TYPE.Django,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.Redis: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.RedisEnterprise: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.CosmosCassandra: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.CosmosGremlin: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
-            CLIENT_TYPE.Php
+            CLIENT_TYPE.Php,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.CosmosMongo: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Nodejs,
             CLIENT_TYPE.Go,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.CosmosTable: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.CosmosSql: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
-            CLIENT_TYPE.Nodejs
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.StorageBlob: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.StorageQueue: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.StorageFile: [
             CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
             CLIENT_TYPE.Php,
             CLIENT_TYPE.Ruby,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.StorageTable: [
             CLIENT_TYPE.Dotnet,
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.Python,
-            CLIENT_TYPE.Nodejs
-        ],
-        RESOURCE.KeyVault: [
-            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Nodejs,
-            CLIENT_TYPE.SpringBoot
+            CLIENT_TYPE.Blank
         ],
-        # RESOURCE.AppConfig: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs
-        # ],
-        # RESOURCE.EventHub: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs,
-        #     CLIENT_TYPE.Go,
-        #     CLIENT_TYPE.SpringBoot
-        # ],
-        # RESOURCE.ServiceBus: [
-        #     CLIENT_TYPE.Dotnet,
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Python,
-        #     CLIENT_TYPE.Nodejs,
-        #     CLIENT_TYPE.Go,
-        #     CLIENT_TYPE.SpringBoot
-        # ],
+        RESOURCE.KeyVault: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.AppConfig: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.EventHub: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.KafkaSpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.ServiceBus: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
         RESOURCE.SignalR: [
-            CLIENT_TYPE.Dotnet
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.WebPubSub: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Blank
         ],
         RESOURCE.ConfluentKafka: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.SpringBoot,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.FabricSql: [
             CLIENT_TYPE.Dotnet,
             CLIENT_TYPE.Java,
             CLIENT_TYPE.Python,
             CLIENT_TYPE.Go,
-            CLIENT_TYPE.SpringBoot
-        ]
-    },
-    RESOURCE.SpringCloud: {
-        RESOURCE.Postgres: [
+            CLIENT_TYPE.Php,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.AppInsights: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
             CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.CognitiveServices: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Blank
+        ],
+        RESOURCE.ContainerApp: [
+            CLIENT_TYPE.Dotnet,
+            CLIENT_TYPE.DotnetInternal,
+            CLIENT_TYPE.Java,
+            CLIENT_TYPE.Python,
+            CLIENT_TYPE.Nodejs,
+            CLIENT_TYPE.Go,
+            CLIENT_TYPE.Php,
+            CLIENT_TYPE.Ruby,
+            CLIENT_TYPE.Django,
             CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.PostgresFlexible: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.Mysql: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.MysqlFlexible: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        # RESOURCE.Sql: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.SpringBoot,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        # RESOURCE.Redis: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.SpringBoot,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        # RESOURCE.RedisEnterprise: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.SpringBoot,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        RESOURCE.CosmosCassandra: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.CosmosGremlin: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.CosmosMongo: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.CosmosTable: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.CosmosSql: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.StorageBlob: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.StorageQueue: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.StorageFile: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.StorageTable: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.Dotnet
-        ],
-        RESOURCE.KeyVault: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
-        ],
-        # RESOURCE.AppConfig: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        # RESOURCE.EventHub: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.SpringBoot,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        # RESOURCE.ServiceBus: [
-        #     CLIENT_TYPE.Java,
-        #     CLIENT_TYPE.SpringBoot,
-        #     CLIENT_TYPE.Dotnet
-        # ],
-        RESOURCE.ConfluentKafka: [
-            CLIENT_TYPE.Java,
-            CLIENT_TYPE.SpringBoot,
-            CLIENT_TYPE.Dotnet
+            CLIENT_TYPE.Blank
         ]
     }
 }
+
+SUPPORTED_CLIENT_TYPE[RESOURCE.SpringCloud] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+SUPPORTED_CLIENT_TYPE[RESOURCE.SpringCloudDeprecated] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+SUPPORTED_CLIENT_TYPE[RESOURCE.KubernetesCluster] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+SUPPORTED_CLIENT_TYPE[RESOURCE.ContainerApp] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+SUPPORTED_CLIENT_TYPE[RESOURCE.Local] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+SUPPORTED_CLIENT_TYPE[RESOURCE.FunctionApp] = SUPPORTED_CLIENT_TYPE[RESOURCE.WebApp]
+
+
+# The dict defines the options for opt-out
+class OPT_OUT_OPTION(Enum):
+    PUBLIC_NETWORK = 'publicnetwork'
+    CONFIGURATION_INFO = 'configinfo'
+    AUTHENTICATION = 'auth'

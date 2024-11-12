@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"location": "global", "properties": {"zoneType": "Public"}}'
+    body: '{"location": "global"}'
     headers:
       Accept:
       - application/json
@@ -11,37 +11,39 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '60'
+      - '22'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com","name":"zone8.com","type":"Microsoft.Network\/dnszones","etag":"00000002-0000-0000-1aff-705385bed701","location":"global","tags":{},"properties":{"maxNumberOfRecordSets":10000,"maxNumberOfRecordsPerRecordSet":null,"nameServers":["ns1-05.azure-dns.com.","ns2-05.azure-dns.net.","ns3-05.azure-dns.org.","ns4-05.azure-dns.info."],"numberOfRecordSets":2,"zoneType":"Public"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com","name":"zone8.com","type":"Microsoft.Network\/dnszones","etag":"b7c8bd41-5616-45a5-9b8b-81322622f240","location":"global","tags":{},"properties":{"maxNumberOfRecordSets":10000,"maxNumberOfRecordsPerRecordSet":null,"nameServers":["ns1-38.daily.azure-dns.com.","ns2-38.daily.azure-dns.net.","ns3-38.daily.azure-dns.org.","ns4-38.daily.azure-dns.info."],"numberOfRecordSets":2,"zoneType":"Public"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '577'
+      - '552'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:48 GMT
+      - Tue, 27 Jun 2023 03:27:02 GMT
       etag:
-      - 00000002-0000-0000-1aff-705385bed701
-      server:
-      - Microsoft-IIS/10.0
+      - b7c8bd41-5616-45a5-9b8b-81322622f240
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11991'
+      x-msedge-ref:
+      - 'Ref A: C05C27F6591542D3A5859DC7161CBB3E Ref B: CO6AA3150220019 Ref C: 2023-06-27T03:27:01Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -61,44 +63,42 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"2ee3af92-ac1e-4941-9c49-652596d666df","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"6d6cd80a-3f64-4b53-b278-6d254733e957","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '590'
+      - '547'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:49 GMT
+      - Tue, 27 Jun 2023 03:27:03 GMT
       etag:
-      - 2ee3af92-ac1e-4941-9c49-652596d666df
-      server:
-      - Microsoft-IIS/10.0
+      - 6d6cd80a-3f64-4b53-b278-6d254733e957
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11993'
+      x-msedge-ref:
+      - 'Ref A: 0C45E9FB49E94760A362DEF2266B4EF7 Ref B: CO6AA3150220009 Ref C: 2023-06-27T03:27:03Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"properties": {"TTL": 3600, "SOARecord": {"host": "ns1-05.azure-dns.com.",
-      "email": "azuredns-hostmaster.microsoft.com.", "serialNumber": 1, "refreshTime":
-      3600, "retryTime": 300, "expireTime": 2419200, "minimumTTL": 300}}}'
+    body: '{"properties": {"SOARecord": {"email": "azuredns-hostmaster.microsoft.com.",
+      "expireTime": 2419200, "host": "ns1-38.daily.azure-dns.com.", "minimumTTL":
+      300, "refreshTime": 3600, "retryTime": 300, "serialNumber": 1}, "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -109,41 +109,39 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '224'
+      - '230'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/soa/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"c73fa3e2-7c20-4965-b0c9-b59d76bbc558","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"6eb3c389-51de-41c2-b748-edf45bec1212","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '591'
+      - '548'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:50 GMT
+      - Tue, 27 Jun 2023 03:27:03 GMT
       etag:
-      - c73fa3e2-7c20-4965-b0c9-b59d76bbc558
-      server:
-      - Microsoft-IIS/10.0
+      - 6eb3c389-51de-41c2-b748-edf45bec1212
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11996'
+      x-msedge-ref:
+      - 'Ref A: 08D0149F1DD14960A94BCA00F2A07434 Ref B: CO6AA3150220037 Ref C: 2023-06-27T03:27:03Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -163,45 +161,42 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"8693c9d8-57e2-47bb-aa81-f68a39f1fb80","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"2ceb5ff3-c999-4c8c-8713-3bc14b2ac548","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '570'
+      - '545'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:50 GMT
+      - Tue, 27 Jun 2023 03:27:04 GMT
       etag:
-      - 8693c9d8-57e2-47bb-aa81-f68a39f1fb80
-      server:
-      - Microsoft-IIS/10.0
+      - 2ceb5ff3-c999-4c8c-8713-3bc14b2ac548
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11996'
+      x-msedge-ref:
+      - 'Ref A: 166B9231881E42298A3A4E939C247A74 Ref B: CO6AA3150220011 Ref C: 2023-06-27T03:27:04Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"etag": "8693c9d8-57e2-47bb-aa81-f68a39f1fb80", "properties": {"TTL":
-      172800, "targetResource": {}, "NSRecords": [{"nsdname": "ns1-05.azure-dns.com."},
-      {"nsdname": "ns2-05.azure-dns.net."}, {"nsdname": "ns3-05.azure-dns.org."},
-      {"nsdname": "ns4-05.azure-dns.info."}]}}'
+    body: '{"properties": {"NSRecords": [{"nsdname": "ns1-38.daily.azure-dns.com."},
+      {"nsdname": "ns2-38.daily.azure-dns.net."}, {"nsdname": "ns3-38.daily.azure-dns.org."},
+      {"nsdname": "ns4-38.daily.azure-dns.info."}], "TTL": 172800}}'
     headers:
       Accept:
       - application/json
@@ -212,48 +207,46 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '269'
+      - '223'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"b6cce981-38cb-4598-b9fd-cfaac134380d","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"e6be0b9d-326b-49f6-8848-3c5f481969a7","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '570'
+      - '545'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:52 GMT
+      - Tue, 27 Jun 2023 03:27:05 GMT
       etag:
-      - b6cce981-38cb-4598-b9fd-cfaac134380d
-      server:
-      - Microsoft-IIS/10.0
+      - e6be0b9d-326b-49f6-8848-3c5f481969a7
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11993'
+      x-msedge-ref:
+      - 'Ref A: 82623CA6172D48F599E6275FE77A4CA1 Ref B: CO6AA3150218023 Ref C: 2023-06-27T03:27:05Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"properties": {"TTL": 3600, "ARecords": [{"ipv4Address": "1.2.3.4"}]}}'
+    body: '{"properties": {"ARecords": [{"ipv4Address": "1.2.3.4"}], "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -270,38 +263,40 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/a/ns?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/A/ns?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"63f238a7-9919-4f8b-be2a-96710669982b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"4ab1b6dd-c543-4194-858a-1917c9b7261b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '451'
+      - '402'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:53 GMT
+      - Tue, 27 Jun 2023 03:27:05 GMT
       etag:
-      - 63f238a7-9919-4f8b-be2a-96710669982b
-      server:
-      - Microsoft-IIS/10.0
+      - 4ab1b6dd-c543-4194-858a-1917c9b7261b
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11979'
+      x-msedge-ref:
+      - 'Ref A: 1618FC43367B4AE2BFC0BF2E8A22B5C5 Ref B: CO6AA3150220025 Ref C: 2023-06-27T03:27:05Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 201
       message: Created
 - request:
-    body: '{"properties": {"TTL": 3600, "ARecords": [{"ipv4Address": "2.3.4.5"}]}}'
+    body: '{"properties": {"ARecords": [{"ipv4Address": "2.3.4.5"}], "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -318,31 +313,33 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/a/*?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/A/*?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"8ec66eaa-2dde-4d43-a3b7-3e5dca80d876","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"e65b4e52-5a2f-4d59-b7e9-5ab19f892269","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '448'
+      - '399'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:54 GMT
+      - Tue, 27 Jun 2023 03:27:06 GMT
       etag:
-      - 8ec66eaa-2dde-4d43-a3b7-3e5dca80d876
-      server:
-      - Microsoft-IIS/10.0
+      - e65b4e52-5a2f-4d59-b7e9-5ab19f892269
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11998'
+      - '11980'
+      x-msedge-ref:
+      - 'Ref A: EFEA488BCEEF4B298B424EC66D6811FB Ref B: CO6AA3150218027 Ref C: 2023-06-27T03:27:06Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -362,35 +359,31 @@ interactions:
       ParameterSetName:
       - -g -z
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"b6cce981-38cb-4598-b9fd-cfaac134380d","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"c73fa3e2-7c20-4965-b0c9-b59d76bbc558","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"8ec66eaa-2dde-4d43-a3b7-3e5dca80d876","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"63f238a7-9919-4f8b-be2a-96710669982b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
+      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"e6be0b9d-326b-49f6-8848-3c5f481969a7","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"6eb3c389-51de-41c2-b748-edf45bec1212","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"e65b4e52-5a2f-4d59-b7e9-5ab19f892269","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"4ab1b6dd-c543-4194-858a-1917c9b7261b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
     headers:
       cache-control:
       - private
       content-length:
-      - '2075'
+      - '1909'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:55 GMT
-      server:
-      - Microsoft-IIS/10.0
+      - Tue, 27 Jun 2023 03:27:07 GMT
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
-      x-ms-ratelimit-remaining-subscription-resource-entities-read:
-      - '59996'
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11994'
+      x-msedge-ref:
+      - 'Ref A: C81A6592A038478F8F0BC1D4857A7ABA Ref B: CO6AA3150217053 Ref C: 2023-06-27T03:27:06Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -410,35 +403,31 @@ interactions:
       ParameterSetName:
       - -g -n --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"b6cce981-38cb-4598-b9fd-cfaac134380d","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"c73fa3e2-7c20-4965-b0c9-b59d76bbc558","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"8ec66eaa-2dde-4d43-a3b7-3e5dca80d876","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"63f238a7-9919-4f8b-be2a-96710669982b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
+      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"e6be0b9d-326b-49f6-8848-3c5f481969a7","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"6eb3c389-51de-41c2-b748-edf45bec1212","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"e65b4e52-5a2f-4d59-b7e9-5ab19f892269","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"4ab1b6dd-c543-4194-858a-1917c9b7261b","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
     headers:
       cache-control:
       - private
       content-length:
-      - '2075'
+      - '1909'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:49:56 GMT
-      server:
-      - Microsoft-IIS/10.0
+      - Tue, 27 Jun 2023 03:27:08 GMT
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
-      x-ms-ratelimit-remaining-subscription-resource-entities-read:
-      - '59996'
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11992'
+      x-msedge-ref:
+      - 'Ref A: DDBC71F7EC7C4BDC92997036FAAF937E Ref B: CO6AA3150219037 Ref C: 2023-06-27T03:27:08Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -448,7 +437,7 @@ interactions:
     body: null
     headers:
       Accept:
-      - application/json
+      - '*/*'
       Accept-Encoding:
       - gzip, deflate
       CommandName:
@@ -460,31 +449,33 @@ interactions:
       ParameterSetName:
       - -g -n -y
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: DELETE
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2023-07-01-preview
   response:
     body:
       string: ''
     headers:
       azure-asyncoperation:
-      - https://management.azure.com:443/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationStatuses/delzone637695425995334093090fc0f0?api-version=2018-05-01
+      - https://management.azure.com:443/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationStatuses/00000000-0000-0000-0000-000000000026;250839;zone8.com;Regular?api-version=2023-07-01-preview
       cache-control:
       - private
       content-length:
       - '0'
       date:
-      - Mon, 11 Oct 2021 09:50:00 GMT
+      - Tue, 27 Jun 2023 03:27:10 GMT
       location:
-      - https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationResults/delzone637695425995334093090fc0f0?api-version=2018-05-01
-      server:
-      - Microsoft-IIS/10.0
+      - https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationResults/00000000-0000-0000-0000-000000000026;250839;zone8.com;Regular?api-version=2023-07-01-preview
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11997'
+      x-msedge-ref:
+      - 'Ref A: 003B5C97AABE4DAC99C8A775771FB645 Ref B: CO6AA3150219017 Ref C: 2023-06-27T03:27:08Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -504,9 +495,9 @@ interactions:
       ParameterSetName:
       - -g -n -y
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationStatuses/delzone637695425995334093090fc0f0?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsOperationStatuses/00000000-0000-0000-0000-000000000026;250839;zone8.com;Regular?api-version=2023-07-01-preview
   response:
     body:
       string: '{"status":"Succeeded"}'
@@ -518,26 +509,24 @@ interactions:
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:03 GMT
-      server:
-      - Microsoft-IIS/10.0
+      - Tue, 27 Jun 2023 03:27:10 GMT
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11997'
+      x-msedge-ref:
+      - 'Ref A: 3CF4A02F03C740C79FDE442D2D6A5299 Ref B: CO6AA3150219017 Ref C: 2023-06-27T03:27:10Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"location": "global", "properties": {"zoneType": "Public"}}'
+    body: '{"location": "global"}'
     headers:
       Accept:
       - application/json
@@ -548,37 +537,39 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '60'
+      - '22'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com","name":"zone8.com","type":"Microsoft.Network\/dnszones","etag":"00000002-0000-0000-a40c-bd5e85bed701","location":"global","tags":{},"properties":{"maxNumberOfRecordSets":10000,"maxNumberOfRecordsPerRecordSet":null,"nameServers":["ns1-05.azure-dns.com.","ns2-05.azure-dns.net.","ns3-05.azure-dns.org.","ns4-05.azure-dns.info."],"numberOfRecordSets":2,"zoneType":"Public"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com","name":"zone8.com","type":"Microsoft.Network\/dnszones","etag":"18e1d399-c5ac-4820-bce4-d3c0d08b7e55","location":"global","tags":{},"properties":{"maxNumberOfRecordSets":10000,"maxNumberOfRecordsPerRecordSet":null,"nameServers":["ns1-38.daily.azure-dns.com.","ns2-38.daily.azure-dns.net.","ns3-38.daily.azure-dns.org.","ns4-38.daily.azure-dns.info."],"numberOfRecordSets":2,"zoneType":"Public"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '577'
+      - '552'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:05 GMT
+      - Tue, 27 Jun 2023 03:27:10 GMT
       etag:
-      - 00000002-0000-0000-a40c-bd5e85bed701
-      server:
-      - Microsoft-IIS/10.0
+      - 18e1d399-c5ac-4820-bce4-d3c0d08b7e55
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11994'
+      x-msedge-ref:
+      - 'Ref A: 75CF24637355451397F56667D61551CA Ref B: CO6AA3150220051 Ref C: 2023-06-27T03:27:10Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -598,44 +589,42 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"82faefcb-9cc5-4c99-aa56-1c99d7df0f1e","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"5b2b6421-4438-45fa-8acc-ba985309553a","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '590'
+      - '547'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:06 GMT
+      - Tue, 27 Jun 2023 03:27:11 GMT
       etag:
-      - 82faefcb-9cc5-4c99-aa56-1c99d7df0f1e
-      server:
-      - Microsoft-IIS/10.0
+      - 5b2b6421-4438-45fa-8acc-ba985309553a
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11995'
+      x-msedge-ref:
+      - 'Ref A: B1CD0E42DC934181A7DA4638EE648323 Ref B: CO6AA3150219011 Ref C: 2023-06-27T03:27:11Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"properties": {"TTL": 3600, "SOARecord": {"host": "ns1-05.azure-dns.com.",
-      "email": "azuredns-hostmaster.microsoft.com.", "serialNumber": 1, "refreshTime":
-      3600, "retryTime": 300, "expireTime": 2419200, "minimumTTL": 300}}}'
+    body: '{"properties": {"SOARecord": {"email": "azuredns-hostmaster.microsoft.com.",
+      "expireTime": 2419200, "host": "ns1-38.daily.azure-dns.com.", "minimumTTL":
+      300, "refreshTime": 3600, "retryTime": 300, "serialNumber": 1}, "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -646,41 +635,39 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '224'
+      - '230'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/soa/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/SOA/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"2ad9d8d7-5a9c-467d-9aaa-dac841a30cbc","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"ba72ce3b-1e33-4ef6-a123-368d93ee485a","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '591'
+      - '548'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:07 GMT
+      - Tue, 27 Jun 2023 03:27:11 GMT
       etag:
-      - 2ad9d8d7-5a9c-467d-9aaa-dac841a30cbc
-      server:
-      - Microsoft-IIS/10.0
+      - ba72ce3b-1e33-4ef6-a123-368d93ee485a
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11996'
+      x-msedge-ref:
+      - 'Ref A: 09605C1518CA42B581B1421F7B11CA87 Ref B: CO6AA3150218029 Ref C: 2023-06-27T03:27:11Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -700,45 +687,42 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"e1615c5b-c443-4a4a-9aa5-5704f57df1e0","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"c6794350-69a0-4e9f-9e96-6f4013af046b","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '570'
+      - '545'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:08 GMT
+      - Tue, 27 Jun 2023 03:27:11 GMT
       etag:
-      - e1615c5b-c443-4a4a-9aa5-5704f57df1e0
-      server:
-      - Microsoft-IIS/10.0
+      - c6794350-69a0-4e9f-9e96-6f4013af046b
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11989'
+      x-msedge-ref:
+      - 'Ref A: CBB2A972748445A1A52847994F3AECE6 Ref B: CO6AA3150219011 Ref C: 2023-06-27T03:27:12Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"etag": "e1615c5b-c443-4a4a-9aa5-5704f57df1e0", "properties": {"TTL":
-      172800, "targetResource": {}, "NSRecords": [{"nsdname": "ns1-05.azure-dns.com."},
-      {"nsdname": "ns2-05.azure-dns.net."}, {"nsdname": "ns3-05.azure-dns.org."},
-      {"nsdname": "ns4-05.azure-dns.info."}]}}'
+    body: '{"properties": {"NSRecords": [{"nsdname": "ns1-38.daily.azure-dns.com."},
+      {"nsdname": "ns2-38.daily.azure-dns.net."}, {"nsdname": "ns3-38.daily.azure-dns.org."},
+      {"nsdname": "ns4-38.daily.azure-dns.info."}], "TTL": 172800}}'
     headers:
       Accept:
       - application/json
@@ -749,48 +733,46 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '269'
+      - '223'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/NS/@?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"d5b554b5-8b29-4290-b6bc-408ed5a95dfe","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"31f0da24-0098-4ded-975d-3808488fe196","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '570'
+      - '545'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:09 GMT
+      - Tue, 27 Jun 2023 03:27:12 GMT
       etag:
-      - d5b554b5-8b29-4290-b6bc-408ed5a95dfe
-      server:
-      - Microsoft-IIS/10.0
+      - 31f0da24-0098-4ded-975d-3808488fe196
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11994'
+      x-msedge-ref:
+      - 'Ref A: C37DC9ED43914E818F8932AD7C00AC05 Ref B: CO6AA3150218053 Ref C: 2023-06-27T03:27:12Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 200
       message: OK
 - request:
-    body: '{"properties": {"TTL": 3600, "ARecords": [{"ipv4Address": "2.3.4.5"}]}}'
+    body: '{"properties": {"ARecords": [{"ipv4Address": "2.3.4.5"}], "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -807,38 +789,40 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/a/*?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/A/*?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"ac65370c-aa3a-41fc-8e9b-c3d0333a73a2","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"a1117478-3c69-4b85-9ff7-b18cb7dd2fd6","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '448'
+      - '399'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:10 GMT
+      - Tue, 27 Jun 2023 03:27:13 GMT
       etag:
-      - ac65370c-aa3a-41fc-8e9b-c3d0333a73a2
-      server:
-      - Microsoft-IIS/10.0
+      - a1117478-3c69-4b85-9ff7-b18cb7dd2fd6
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11999'
+      - '11985'
+      x-msedge-ref:
+      - 'Ref A: 519AC1336F8F4D49ACAA64B4A591D21D Ref B: CO6AA3150219027 Ref C: 2023-06-27T03:27:13Z'
       x-powered-by:
       - ASP.NET
     status:
       code: 201
       message: Created
 - request:
-    body: '{"properties": {"TTL": 3600, "ARecords": [{"ipv4Address": "1.2.3.4"}]}}'
+    body: '{"properties": {"ARecords": [{"ipv4Address": "1.2.3.4"}], "TTL": 3600}}'
     headers:
       Accept:
       - application/json
@@ -855,31 +839,33 @@ interactions:
       ParameterSetName:
       - -n -g --file-name
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/a/ns?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/A/ns?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"b20819e5-3199-4e09-8db6-ef0eb91d57d6","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}'
+      string: '{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"2965ccdd-3eeb-4cce-8005-f11faecac769","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}'
     headers:
       cache-control:
       - private
       content-length:
-      - '451'
+      - '402'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:11 GMT
+      - Tue, 27 Jun 2023 03:27:13 GMT
       etag:
-      - b20819e5-3199-4e09-8db6-ef0eb91d57d6
-      server:
-      - Microsoft-IIS/10.0
+      - 2965ccdd-3eeb-4cce-8005-f11faecac769
       strict-transport-security:
       - max-age=31536000; includeSubDomains
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '11998'
+      - '11979'
+      x-msedge-ref:
+      - 'Ref A: 058BE21163C1458DA269CE982A0D7C73 Ref B: CO6AA3150220047 Ref C: 2023-06-27T03:27:13Z'
       x-powered-by:
       - ASP.NET
     status:
@@ -899,35 +885,31 @@ interactions:
       ParameterSetName:
       - -g -z
       User-Agent:
-      - AZURECLI/2.29.0 azsdk-python-azure-mgmt-dns/8.0.0 Python/3.8.3 (Windows-10-10.0.18362-SP0)
+      - AZURECLI/2.49.0 (AAZ) azsdk-python-core/1.26.0 Python/3.11.2 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2018-05-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_dns_zone8_import000001/providers/Microsoft.Network/dnsZones/zone8.com/recordsets?api-version=2023-07-01-preview
   response:
     body:
-      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"d5b554b5-8b29-4290-b6bc-408ed5a95dfe","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-05.azure-dns.com."},{"nsdname":"ns2-05.azure-dns.net."},{"nsdname":"ns3-05.azure-dns.org."},{"nsdname":"ns4-05.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"2ad9d8d7-5a9c-467d-9aaa-dac841a30cbc","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-05.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"ac65370c-aa3a-41fc-8e9b-c3d0333a73a2","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"b20819e5-3199-4e09-8db6-ef0eb91d57d6","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
+      string: '{"value":[{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/NS\/@","name":"@","type":"Microsoft.Network\/dnszones\/NS","etag":"31f0da24-0098-4ded-975d-3808488fe196","properties":{"fqdn":"zone8.com.","TTL":172800,"NSRecords":[{"nsdname":"ns1-38.daily.azure-dns.com."},{"nsdname":"ns2-38.daily.azure-dns.net."},{"nsdname":"ns3-38.daily.azure-dns.org."},{"nsdname":"ns4-38.daily.azure-dns.info."}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/SOA\/@","name":"@","type":"Microsoft.Network\/dnszones\/SOA","etag":"ba72ce3b-1e33-4ef6-a123-368d93ee485a","properties":{"fqdn":"zone8.com.","TTL":3600,"SOARecord":{"email":"azuredns-hostmaster.microsoft.com.","expireTime":2419200,"host":"ns1-38.daily.azure-dns.com.","minimumTTL":300,"refreshTime":3600,"retryTime":300,"serialNumber":1},"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/*","name":"*","type":"Microsoft.Network\/dnszones\/A","etag":"a1117478-3c69-4b85-9ff7-b18cb7dd2fd6","properties":{"fqdn":"*.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"2.3.4.5"}],"targetResource":{},"provisioningState":"Succeeded"}},{"id":"\/subscriptions\/00000000-0000-0000-0000-000000000000\/resourceGroups\/cli_dns_zone8_import000001\/providers\/Microsoft.Network\/dnszones\/zone8.com\/A\/ns","name":"ns","type":"Microsoft.Network\/dnszones\/A","etag":"2965ccdd-3eeb-4cce-8005-f11faecac769","properties":{"fqdn":"ns.zone8.com.","TTL":3600,"ARecords":[{"ipv4Address":"1.2.3.4"}],"targetResource":{},"provisioningState":"Succeeded"}}]}'
     headers:
       cache-control:
       - private
       content-length:
-      - '2075'
+      - '1909'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 11 Oct 2021 09:50:13 GMT
-      server:
-      - Microsoft-IIS/10.0
+      - Tue, 27 Jun 2023 03:27:13 GMT
       strict-transport-security:
       - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
+      x-cache:
+      - CONFIG_NOCACHE
       x-content-type-options:
       - nosniff
-      x-ms-ratelimit-remaining-subscription-resource-entities-read:
-      - '59996'
       x-ms-ratelimit-remaining-subscription-resource-requests:
-      - '499'
+      - '11993'
+      x-msedge-ref:
+      - 'Ref A: 7AD281218D46488CA7FD344B5A359BA8 Ref B: CO6AA3150220011 Ref C: 2023-06-27T03:27:14Z'
       x-powered-by:
       - ASP.NET
     status:

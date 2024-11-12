@@ -4,10 +4,11 @@
 # --------------------------------------------------------------------------------------------
 
 import os
+import unittest
 from unittest import mock
 
 from azure.cli.testsdk import (ScenarioTest, ResourceGroupPreparer)
-from azure_devtools.scenario_tests import AllowLargeResponse
+from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 
 
 TEST_DIR = os.path.abspath(os.path.join(os.path.abspath(__file__), '..'))
@@ -17,6 +18,7 @@ class ManagedCassandraScenarioTest(ScenarioTest):
 
     # pylint: disable=line-too-long
     # pylint: disable=broad-except
+    @unittest.skip('Cannot record due to https://github.com/Azure/azure-cli/issues/22174')
     @ResourceGroupPreparer(name_prefix='cli_managed_cassandra')
     def test_managed_cassandra_cluster_without_datacenters(self, resource_group):
 
@@ -39,6 +41,7 @@ class ManagedCassandraScenarioTest(ScenarioTest):
             print(e)
 
     # pylint: disable=broad-except
+    @unittest.skip('Cannot record due to https://github.com/Azure/azure-cli/issues/22174')
     @ResourceGroupPreparer(name_prefix='cli_managed_cassandra')
     @AllowLargeResponse()
     def test_managed_cassandra_verify_lists(self, resource_group):

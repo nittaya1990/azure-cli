@@ -14,16 +14,18 @@ from knack.log import get_logger
 
 from azure.mgmt.core.tools import parse_resource_id, is_valid_resource_id
 
-from azure.mgmt.recoveryservicesbackup.models import OperationStatusValues, JobStatus, CrrJobRequest
+from azure.mgmt.recoveryservicesbackup.activestamp.models import OperationStatusValues, JobStatus
+from azure.mgmt.recoveryservicesbackup.passivestamp.models import CrrJobRequest
 
 from azure.cli.core.util import CLIError
 from azure.cli.core.commands import _is_paged
 from azure.cli.command_modules.backup._client_factory import (
     job_details_cf, protection_container_refresh_operation_results_cf,
     backup_operation_statuses_cf, protection_container_operation_results_cf,
-    backup_crr_job_details_cf, crr_operation_status_cf)
+    backup_crr_job_details_cf, crr_operation_status_cf, resource_guard_proxies_cf, resource_guard_proxy_cf)
 from azure.cli.core.azclierror import ResourceNotFoundError, ValidationError, InvalidArgumentValueError
 
+import azure.cli.command_modules.backup._params as params
 
 logger = get_logger(__name__)
 
@@ -32,9 +34,25 @@ os_windows = 'Windows'
 os_linux = 'Linux'
 password_offset = 33
 password_length = 15
+default_resource_guard = "VaultProxy"
 
 backup_management_type_map = {"AzureVM": "AzureIaasVM", "AzureWorkload": "AzureWorkLoad",
                               "AzureStorage": "AzureStorage", "MAB": "MAB"}
+
+rsc_type = "Microsoft.RecoveryServices/vaults"
+operation_name_map = {"deleteProtection": rsc_type + "/backupFabrics/protectionContainers/protectedItems/delete",
+                      "updateProtection": rsc_type + "/backupFabrics/protectionContainers/protectedItems/write",
+                      "updatePolicy": rsc_type + "/backupPolicies/write",
+                      "deleteRGMapping": rsc_type + "/backupResourceGuardProxies/delete",
+                      "getSecurityPIN": rsc_type + "/backupSecurityPIN/action",
+                      "disableSoftDelete": rsc_type + "/backupconfig/write",
+                      "RecoveryServicesDisableImmutability": rsc_type + "/write#reduceImmutabilityState",
+                      "RecoveryServicesStopProtection": rsc_type +
+                      "/backupFabrics/protectionContainers/protectedItems/write#stopProtectionWithRetainData",
+                      "RecoveryServicesRestore": rsc_type +
+                      "/backupFabrics/protectionContainers/protectedItems/recoveryPoints/restore/action",
+                      "RecoveryServicesModifyEncryptionSettings": rsc_type +
+                      "/write#modifyEncryptionSettings"}
 
 # Client Utilities
 
@@ -98,6 +116,228 @@ def get_resource_name_and_rg(resource_group_name, name_or_id):
         name = name_or_id
         resource_group = resource_group_name
     return name, resource_group
+
+
+def has_resource_guard_mapping(cli_ctx, resource_group_name, vault_name, operation_name=None):
+    resource_guard_proxies_client = resource_guard_proxies_cf(cli_ctx)
+    resource_guard_mappings = get_list_from_paged_response(resource_guard_proxies_client.get(vault_name,
+                                                                                             resource_group_name))
+    if not resource_guard_mappings:
+        return False
+    if operation_name is None:
+        return True
+    resource_guard_mapping = resource_guard_mappings[0]
+    result = False
+    for operation_detail in resource_guard_mapping.properties.resource_guard_operation_details:
+        if operation_detail.vault_critical_operation == operation_name_map[operation_name]:
+            result = True
+            break
+    return result
+
+
+def get_resource_guard_operation_request(cli_ctx, resource_group_name, vault_name, operation_name):
+    resource_guard_proxy_client = resource_guard_proxy_cf(cli_ctx)
+    resource_guard_mapping = resource_guard_proxy_client.get(vault_name, resource_group_name, default_resource_guard)
+    operation_request = ""
+    for operation_detail in resource_guard_mapping.properties.resource_guard_operation_details:
+        if operation_detail.vault_critical_operation == operation_name_map[operation_name]:
+            operation_request = operation_detail.default_resource_request
+            break
+    return operation_request
+
+
+def is_immutability_weakened(existing_vault, patchvault):
+    if existing_vault.properties.security_settings.immutability_settings is not None:
+        if existing_vault.properties.security_settings.immutability_settings.state == "Unlocked":
+            if (patchvault.properties.security_settings is not None and
+               patchvault.properties.security_settings.immutability_settings is not None and
+               patchvault.properties.security_settings.immutability_settings.state == "Disabled"):
+                return True
+    return False
+
+
+def is_rpo_increased(old_policy, new_policy, backup_management_type):
+    return calculate_rpo(new_policy, backup_management_type) > calculate_rpo(old_policy, backup_management_type)
+
+
+def calculate_rpo(policy, backup_management_type):
+    rpo_time = 0
+
+    if backup_management_type == "AzureIaasVM":
+        schedule_policy = policy.properties.schedule_policy
+        if schedule_policy.schedule_run_frequency == 'Hourly':
+            if schedule_policy.hourly_schedule.schedule_window_duration == 24:
+                rpo_time = schedule_policy.hourly_schedule.interval
+            else:
+                rpo_time = 24 - schedule_policy.hourly_schedule.schedule_window_duration
+
+        if schedule_policy.schedule_run_frequency == "Daily":
+            rpo_time = 24
+
+        if schedule_policy.schedule_run_frequency == "Weekly":
+            rpo_time = calculate_weekly_rpo(schedule_policy.weekly_schedule.schedule_run_days)
+
+    if backup_management_type == "AzureStorage":
+        schedule_policy = policy.properties.schedule_policy
+        if schedule_policy.schedule_run_frequency == 'Hourly':
+            if schedule_policy.hourly_schedule.schedule_window_duration <= schedule_policy.hourly_schedule.interval:
+                rpo_time = 24
+            else:
+                number_of_rps = (schedule_policy.hourly_schedule.schedule_window_duration //
+                                 schedule_policy.hourly_schedule.interval) + 1
+                rpo_time = 24 - (schedule_policy.hourly_schedule.interval * (number_of_rps - 1))
+
+        if schedule_policy.schedule_run_frequency == "Daily":
+            rpo_time = 24
+
+    if backup_management_type == "AzureWorkload":
+        log_policy = get_sub_protection_policy(policy, "Log")
+        full_policy = get_sub_protection_policy(policy, "Full")
+        differential_policy = get_sub_protection_policy(policy, "Differential")
+        incremental_policy = get_sub_protection_policy(policy, "Incremental")
+
+        if log_policy is not None:
+            rpo_time = log_policy.schedule_policy.schedule_frequency_in_mins / 60
+
+        elif full_policy.schedule_policy.schedule_run_frequency == "Daily":
+            rpo_time = 24
+
+        else:  # weekly policy
+            combined_schedule = []
+            if full_policy.retention_policy.weekly_schedule is not None:
+                combined_schedule.append(full_policy.retention_policy.weekly_schedule.days_of_the_week)
+            if differential_policy is not None:
+                combined_schedule.append(differential_policy.schedule_policy.schedule_run_days)
+            if incremental_policy is not None:
+                combined_schedule.append(incremental_policy.schedule_policy.schedule_run_days)
+            rpo_time = calculate_weekly_rpo(combined_schedule)
+
+    return rpo_time
+
+
+def calculate_weekly_rpo(schedule_run_days):
+    week_map = {
+        'sunday': 0,
+        'monday': 1,
+        'tuesday': 2,
+        'wednesday': 3,
+        'thursday': 4,
+        'friday': 5,
+        'saturday': 6
+    }
+    week_mask = [False] * 7
+    for day in schedule_run_days:
+        if day.lower() in week_map:
+            week_mask[int(week_map[day.lower()])] = True
+    week_circular_mask = week_mask * 2
+
+    last_active_index = None
+    largest_gap = 0
+    gap = 0
+    for index, backup_scheduled in enumerate(week_circular_mask):
+        if backup_scheduled:
+            if last_active_index is not None:
+                gap = index - last_active_index
+                largest_gap = max(largest_gap, gap)
+            last_active_index = index
+
+    return largest_gap * 24
+
+
+def is_retention_duration_decreased(old_policy, new_policy, backup_management_type):
+    if is_rpo_increased(old_policy, new_policy, backup_management_type):
+        return True
+    if backup_management_type == "AzureIaasVM":
+        if old_policy.properties.instant_rp_retention_range_in_days is not None:
+            if (new_policy.properties.instant_rp_retention_range_in_days is None or
+                (new_policy.properties.instant_rp_retention_range_in_days <
+                 old_policy.properties.instant_rp_retention_range_in_days)):
+                return True
+        return is_long_term_retention_decreased(old_policy.properties.retention_policy,
+                                                new_policy.properties.retention_policy)
+    if backup_management_type == "AzureStorage":
+        return is_long_term_retention_decreased(old_policy.properties.retention_policy,
+                                                new_policy.properties.retention_policy)
+    if backup_management_type == "AzureWorkload":
+        return is_workload_policy_retention_decreased(old_policy, new_policy)
+    return False
+
+
+def is_long_term_retention_decreased(old_retention_policy, new_retention_policy):
+    if old_retention_policy.daily_schedule is not None:
+        if (new_retention_policy.daily_schedule is None or
+            (new_retention_policy.daily_schedule.retention_duration.count <
+             old_retention_policy.daily_schedule.retention_duration.count)):
+            return True
+
+    if old_retention_policy.weekly_schedule is not None:
+        if (new_retention_policy.weekly_schedule is None or
+            (new_retention_policy.weekly_schedule.retention_duration.count <
+             old_retention_policy.weekly_schedule.retention_duration.count)):
+            return True
+
+    if old_retention_policy.monthly_schedule is not None:
+        if (new_retention_policy.monthly_schedule is None or
+            (new_retention_policy.monthly_schedule.retention_duration.count <
+             old_retention_policy.monthly_schedule.retention_duration.count)):
+            return True
+
+    if old_retention_policy.yearly_schedule is not None:
+        if (new_retention_policy.yearly_schedule is None or
+            (new_retention_policy.yearly_schedule.retention_duration.count <
+             old_retention_policy.yearly_schedule.retention_duration.count)):
+            return True
+
+    return False
+
+
+def is_simple_term_retention_decreased(old_retention_policy, new_retention_policy):
+    if new_retention_policy.retention_duration.count < old_retention_policy.retention_duration.count:
+        return True
+
+    return False
+
+
+def is_workload_policy_retention_decreased(old_policy, new_policy):
+    old_sub_protection_policies = old_policy.properties.sub_protection_policy
+    for old_sub_protection_policy in old_sub_protection_policies:
+        sub_policy_type = old_sub_protection_policy.policy_type
+        new_sub_protection_policy = get_sub_protection_policy(new_policy, sub_policy_type)
+        if new_sub_protection_policy is None:
+            return True
+        # is SnapshotCopyOnlyFull allowed from CLI?
+        if sub_policy_type == "SnapshotCopyOnlyFull":
+            if (new_sub_protection_policy.snapshot_backup_additional_details.instant_rp_retention_range_in_days <
+                    old_sub_protection_policy.snapshot_backup_additional_details.instant_rp_retention_range_in_days):
+                return True
+        else:
+            if old_sub_protection_policy.retention_policy.retention_policy_type == "SimpleRetentionPolicy":
+                if is_simple_term_retention_decreased(old_sub_protection_policy.retention_policy,
+                                                      new_sub_protection_policy.retention_policy):
+                    return True
+            elif old_sub_protection_policy.retention_policy.retention_policy_type == "LongTermRetentionPolicy":
+                if is_long_term_retention_decreased(old_sub_protection_policy.retention_policy,
+                                                    new_sub_protection_policy.retention_policy):
+                    return True
+    return False
+
+
+def get_sub_protection_policy(policy, sub_policy_type):
+    for sub_protection_policy in policy.properties.sub_protection_policy:
+        if sub_protection_policy.policy_type == sub_policy_type:
+            return sub_protection_policy
+    return None
+
+
+def replace_min_value_in_subtask(response):
+    # For a task in progress: replace min_value in start and end times with null.
+    tasks_list = response.properties.extended_info.tasks_list
+    for task in tasks_list:
+        if task.start_time == datetime.min:
+            task.start_time = None
+        if task.end_time == datetime.min:
+            task.end_time = None
+    return response
 
 
 def validate_container(container):
@@ -187,12 +427,9 @@ def track_backup_crr_operation(cli_ctx, result, azure_region):
 
     operation_id = get_operation_id_from_header(result.http_response.headers['Azure-AsyncOperation'])
     operation_status = crr_operation_statuses_client.get(azure_region, operation_id)
-    # print("tracking started", operation_status.__dict__)
     while operation_status.status == OperationStatusValues.in_progress.value:
         time.sleep(5)
         operation_status = crr_operation_statuses_client.get(azure_region, operation_id)
-        # print("tracking continues", operation_status.__dict__)
-    # print("tracking completed", operation_status.__dict__)
     return operation_status
 
 
@@ -392,6 +629,14 @@ def get_resource_group_from_id(arm_id):
     return m.group(0)
 
 
+def get_subscription_from_id(arm_id):
+    # Search for the pattern following "/subscriptions/" in the ARM ID
+    # (?<=/subscriptions/)   Positive lookbehind: Match the pattern after "/subscriptions/"
+    # [^/]+                  Match one or more characters that are not a forward slash
+    m = re.search('(?<=/subscriptions/)[^/]+', arm_id)
+    return m.group(0)
+
+
 def get_operation_id_from_header(header):
     parse_object = urlparse(header)
     return parse_object.path.split("/")[-1]
@@ -413,10 +658,16 @@ def validate_and_extract_container_type(container_name, backup_management_type):
 
     container_type = container_name.split(";")[0].lower()
     container_type_mappings = {"iaasvmcontainer": "AzureIaasVM", "storagecontainer": "AzureStorage",
-                               "vmappcontainer": "AzureWorkload", "windows": "MAB"}
+                               "vmappcontainer": "AzureWorkload", "windows": "MAB",
+                               "sqlagworkloadcontainer": "AzureWorkload", "hanahsrcontainer": "AzureWorkload"}
 
     if container_type in container_type_mappings:
         return container_type_mappings[container_type]
+    logger.warning(
+        """
+        Could not extract the backup management type. If the command fails check if the container name specified is
+        complete or try using container friendly name instead.
+        """)
     return None
 
 
@@ -425,3 +676,21 @@ def validate_update_policy_request(existing_policy, new_policy):
     new_backup_management_type = new_policy.properties.backup_management_type
     if existing_backup_management_type != new_backup_management_type:
         raise CLIError("BackupManagementType cannot be different than the existing type.")
+
+
+def transform_softdelete_parameters(parameter):
+    if parameter in params.allowed_softdelete_options:
+        if parameter in ('Enable', 'Disable', 'Enabled', 'Disabled'):
+            return transform_enable_parameters(parameter)
+        return parameter
+    error_message = "Please provide a valid soft-delete state. Allowed values: "
+    error_message += ', '.join(state for state in params.allowed_softdelete_options)
+    raise CLIError(error_message)
+
+
+def transform_enable_parameters(parameter):
+    if parameter in ('Enable', 'Disable', 'PermanentlyDisable'):
+        return parameter + 'd'
+    if parameter in ('Enabled', 'Disabled', 'PermanentlyDisabled'):
+        return parameter[:-1]
+    raise CLIError("Please provide a valid parameter.")

@@ -4,10 +4,10 @@
 # --------------------------------------------------------------------------------------------
 
 import os
+import sys
 from datetime import datetime
 
-from azure_devtools.scenario_tests import AbstractPreparer, SingleValueReplacer
-
+from .scenario_tests import AbstractPreparer, SingleValueReplacer
 from .base import LiveScenarioTest
 from .exceptions import CliTestError
 from .reverse_dependency import get_dummy_cli
@@ -73,8 +73,21 @@ class ResourceGroupPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
             self.test_class_instance.kwargs[self.key] = self.dev_setting_name
             return {self.parameter_name: self.dev_setting_name,
                     self.parameter_name_for_location: self.dev_setting_location}
-
-        tags = {'product': 'azurecli', 'cause': 'automation', 'date': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')}
+        test_class_path = sys.modules[self.test_class_instance.__module__].__file__.split(os.sep)
+        # get index of the module name for main repo
+        if 'command_modules' in test_class_path:
+            index_of_module = test_class_path.index('command_modules') + 1
+        # get index of the extension name for extension repo
+        elif 'src' in test_class_path:
+            index_of_module = test_class_path.index('src') + 1
+        else:
+            index_of_module = -1
+        module = test_class_path[index_of_module] if index_of_module >= 0 else 'unknown'
+        tags = {'product': 'azurecli',
+                'cause': 'automation test',
+                'date': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'test': self.test_class_instance._testMethodName,
+                'module': module}
         if 'ENV_JOB_NAME' in os.environ:
             tags['job'] = os.environ['ENV_JOB_NAME']
         tags = ' '.join(['{}={}'.format(key, value) for key, value in tags.items()])
@@ -101,7 +114,8 @@ class ResourceGroupPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
 
 # pylint: disable=too-many-instance-attributes
 class StorageAccountPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
-    def __init__(self, name_prefix='clitest', sku='Standard_LRS', location='westus', kind='Storage', hns=False, length=24,
+    def __init__(self, name_prefix='clitest', sku='Standard_LRS', location='westus', kind='Storage',
+                 allow_blob_public_access=False, allow_shared_key_access=None, hns=False, length=24,
                  parameter_name='storage_account', resource_group_parameter_name='resource_group', skip_delete=True,
                  dev_setting_name='AZURE_CLI_TEST_DEV_STORAGE_ACCOUNT_NAME', key='sa'):
         super(StorageAccountPreparer, self).__init__(name_prefix, length)
@@ -109,6 +123,8 @@ class StorageAccountPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
         self.location = location
         self.sku = sku
         self.kind = kind
+        self.allow_blob_public_access = allow_blob_public_access
+        self.allow_shared_key_access = allow_shared_key_access
         self.hns = hns
         self.resource_group_parameter_name = resource_group_parameter_name
         self.skip_delete = skip_delete
@@ -120,9 +136,18 @@ class StorageAccountPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
         group = self._get_resource_group(**kwargs)
 
         if not self.dev_setting_name:
-            template = 'az storage account create -n {} -g {} -l {} --sku {} --kind {} --https-only '
+            template = 'az storage account create -n {} -g {} -l {} --sku {} --kind {} --https-only'
+            if not self.allow_blob_public_access:
+                template += ' --allow-blob-public-access false'
+            else:
+                template += ' --allow-blob-public-access true'
+            if self.allow_shared_key_access is not None:
+                if not self.allow_shared_key_access:
+                    template += ' --allow-shared-key-access false'
+                else:
+                    template += ' --allow-shared-key-access true'
             if self.hns:
-                template += '--hns'
+                template += ' --hns'
             self.live_only_execute(self.cli_ctx, template.format(
                 name, group, self.location, self.sku, self.kind, self.hns))
         else:
@@ -157,16 +182,17 @@ class StorageAccountPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
 
 # pylint: disable=too-many-instance-attributes
 class KeyVaultPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
-    def __init__(self, name_prefix='clitest', sku='standard', location='westus', enable_soft_delete=True,
+    def __init__(self, name_prefix='clitest', sku='standard', location='westus',
                  parameter_name='key_vault', resource_group_parameter_name='resource_group', skip_delete=False,
+                 skip_purge=False,
                  dev_setting_name='AZURE_CLI_TEST_DEV_KEY_VAULT_NAME', key='kv', name_len=24, additional_params=None):
         super(KeyVaultPreparer, self).__init__(name_prefix, name_len)
         self.cli_ctx = get_dummy_cli()
         self.location = location
         self.sku = sku
-        self.enable_soft_delete = enable_soft_delete
         self.resource_group_parameter_name = resource_group_parameter_name
         self.skip_delete = skip_delete
+        self.skip_purge = skip_purge
         self.parameter_name = parameter_name
         self.key = key
         self.additional_params = additional_params
@@ -176,10 +202,10 @@ class KeyVaultPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
         if not self.dev_setting_name:
             group = self._get_resource_group(**kwargs)
             template = 'az keyvault create -n {} -g {} -l {} --sku {} '
-            if self.enable_soft_delete:
-                template += '--enable-soft-delete --retention-days 7 '
             if self.additional_params:
                 template += self.additional_params
+            if '--retention-days' not in template:
+                template += ' --retention-days 7'
             self.live_only_execute(self.cli_ctx, template.format(name, group, self.location, self.sku))
             self.test_class_instance.kwargs[self.key] = name
             return {self.parameter_name: name}
@@ -191,13 +217,14 @@ class KeyVaultPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
         if not self.skip_delete and not self.dev_setting_name:
             group = self._get_resource_group(**kwargs)
             self.live_only_execute(self.cli_ctx, 'az keyvault delete -n {} -g {}'.format(name, group))
-            if self.enable_soft_delete:
-                from azure.core.exceptions import HttpResponseError
-                try:
-                    self.live_only_execute(self.cli_ctx, 'az keyvault purge -n {} -l {}'.format(name, self.location))
-                except HttpResponseError:
-                    # purge operation will fail with HttpResponseError when --enable-purge-protection
-                    pass
+            from azure.core.exceptions import HttpResponseError
+            if self.skip_purge:
+                return
+            try:
+                self.live_only_execute(self.cli_ctx, 'az keyvault purge -n {} -l {}'.format(name, self.location))
+            except HttpResponseError:
+                # purge operation will fail with HttpResponseError when --enable-purge-protection
+                pass
 
     def _get_resource_group(self, **kwargs):
         try:
@@ -205,7 +232,84 @@ class KeyVaultPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
         except KeyError:
             template = 'To create a KeyVault a resource group is required. Please add ' \
                        'decorator @{} in front of this KeyVault preparer.'
-            raise CliTestError(template.format(KeyVaultPreparer.__name__))
+            raise CliTestError(template.format(ResourceGroupPreparer.__name__))
+
+
+# Managed HSM Preparer and its shorthand decorator
+
+# pylint: disable=too-many-instance-attributes
+class ManagedHSMPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
+    def __init__(self, certs_path, name_prefix='clitest', location='uksouth', key='hsm', name_len=24,
+                 parameter_name='managed_hsm', resource_group_parameter_name='resource_group',
+                 administrators=None, roles=[], additional_params=None, skip_delete=False, skip_purge=False):
+        super(ManagedHSMPreparer, self).__init__(name_prefix, name_len)
+        self.cli_ctx = get_dummy_cli()
+        self.location = location
+        self.resource_group_parameter_name = resource_group_parameter_name
+        self.parameter_name = parameter_name
+        self.key = key
+        self.certs_path = certs_path
+        self.administrators = administrators
+        self.roles = roles
+        self.additional_params = additional_params
+        self.skip_delete = skip_delete
+        self.skip_purge = skip_purge
+
+    def create_resource(self, name, **kwargs):
+        group = self._get_resource_group(**kwargs)
+        administrators = self.administrators or self._get_signed_in_user()
+        template = 'az keyvault create --hsm-name {} -g {} -l {} --administrators {} --retention-days 7'
+        if self.additional_params:
+            template += self.additional_params
+        self.live_only_execute(self.cli_ctx, template.format(name, group, self.location, administrators))
+        # After creating MHSM, All data plane commands are disabled until the HSM is activated.
+        # To activate the HSM, we must download the Security Domain.
+        # See https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/quick-create-cli#activate-your-managed-hsm for details
+        if self.certs_path:
+            cert0 = os.path.join(self.certs_path, 'cert_0.cer').replace('\\', '\\\\')
+            cert1 = os.path.join(self.certs_path, 'cert_1.cer').replace('\\', '\\\\')
+            cert2 = os.path.join(self.certs_path, 'cert_2.cer').replace('\\', '\\\\')
+            security_domain = os.path.join(self.certs_path, f'{name}-SD.json').replace('\\', '\\\\')
+            activate_template = f'az keyvault security-domain download --hsm-name {name} --sd-wrapping-keys {cert0} {cert1} {cert2} --sd-quorum 2 --security-domain-file {security_domain}'
+            self.live_only_execute(self.cli_ctx, activate_template)
+        if self.roles:
+            for role in self.roles:
+                role_assignment_template = f'az keyvault role assignment create --hsm-name {name} --role "{role}" --assignee {administrators} --scope "/"'
+                self.live_only_execute(self.cli_ctx, role_assignment_template)
+        self.test_class_instance.kwargs[self.key] = name
+        return {self.parameter_name: name}
+
+    def remove_resource(self, name, **kwargs):
+        security_domain = os.path.join(self.certs_path, f'{name}-SD.json').replace('\\', '\\\\')
+        if os.path.exists(security_domain):
+            os.remove(security_domain)
+        from azure.core.exceptions import HttpResponseError
+        try:
+            if not self.skip_delete:
+                group = self._get_resource_group(**kwargs)
+                self.live_only_execute(self.cli_ctx, 'az keyvault delete --hsm-name {} -g {}'.format(name, group))
+            if self.skip_purge:
+                return
+            self.live_only_execute(self.cli_ctx, 'az keyvault purge --hsm-name {} -l {}'.format(name, self.location))
+        except HttpResponseError:
+            # delete operation will fail with HttpResponseError when there's ongoing updates
+            # purge operation will fail with HttpResponseError when --enable-purge-protection
+            pass
+
+    def _get_signed_in_user(self):
+        try:
+            user_info = self.live_only_execute(self.cli_ctx, 'ad signed-in-user show').get_output_in_json()
+            return user_info['id'] if user_info else None
+        except Exception:
+            return None
+
+    def _get_resource_group(self, **kwargs):
+        try:
+            return kwargs.get(self.resource_group_parameter_name)
+        except KeyError:
+            template = 'To create a Managed HSM, a resource group is required. Please add ' \
+                       'decorator @{} in front of this ManagedHSM preparer.'
+            raise CliTestError(template.format(ResourceGroupPreparer.__name__))
 
 
 # Role based access control service principal preparer
@@ -328,12 +432,12 @@ class VirtualNetworkPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
 
     def remove_resource(self, name, **kwargs):
         if not self.dev_setting_name:
-            from msrestazure.azure_exceptions import CloudError
+            from azure.core.exceptions import HttpResponseError
             try:
                 self.live_only_execute(
                     self.cli_ctx,
                     'az network vnet delete --name {} --resource-group {}'.format(name, self._get_resource_group(**kwargs)))
-            except CloudError:
+            except HttpResponseError:
                 # deletion of vnet may fail as service could create subresources like IPConfig. We could rely on the deletion of resource group to delete the vnet.
                 pass
 
@@ -398,6 +502,53 @@ class VnetNicPreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
             template = 'To create a VirtualNetworkNic a virtual network is required. Please add ' \
                        'decorator @{} in front of this VirtualNetworkNic preparer.'
             raise CliTestError(template.format(VnetNicPreparer.__name__))
+
+
+class LogAnalyticsWorkspacePreparer(NoTrafficRecordingPreparer, SingleValueReplacer):
+    def __init__(self, name_prefix='laworkspace', location='eastus2euap', parameter_name='laworkspace',
+                 resource_group_parameter_name='resource_group', skip_delete=False, get_shared_key=False):
+        super(LogAnalyticsWorkspacePreparer, self).__init__(name_prefix, 15)
+        self.cli_ctx = get_dummy_cli()
+        self.location = location
+        self.parameter_name = parameter_name
+        self.resource_group_parameter_name = resource_group_parameter_name
+        self.skip_delete = skip_delete
+        self.get_shared_key = get_shared_key
+
+    def create_resource(self, name, **kwargs):
+        group = self._get_resource_group(**kwargs)
+        template = ('az monitor log-analytics workspace create -l {} -g {} -n {}')
+        try:
+            customer_id = self.live_only_execute(self.cli_ctx, template.format(self.location, group, name)).get_output_in_json()["customerId"]
+        except AttributeError:  # live only execute returns None if playing from record
+            customer_id = None
+        if self.get_shared_key:
+            get_share_key_template = ('az monitor log-analytics workspace get-shared-keys -g {} -n {}')
+            try:
+                log_shared_key = self.live_only_execute(self.cli_ctx, get_share_key_template.format(group, name)).get_output_in_json()["primarySharedKey"]
+            except AttributeError:  # live only execute returns None if playing from record
+                log_shared_key = None
+
+            return {self.parameter_name: name,
+                    self.parameter_name + '_customer_id': (customer_id or 'veryFakedCustomerId=='),
+                    self.parameter_name + '_shared_key': (log_shared_key or 'veryFakedPrivateSharedKey==')}
+
+        return {self.parameter_name: name}
+
+    def remove_resource(self, name, **kwargs):
+        if not self.skip_delete:
+            group = self._get_resource_group(**kwargs)
+            template = ('az monitor log-analytics workspace delete -g {} -n {} --yes')
+            self.live_only_execute(self.cli_ctx, template.format(group, name))
+
+    def _get_resource_group(self, **kwargs):
+        try:
+            return kwargs.get(self.resource_group_parameter_name)
+        except KeyError:
+            template = 'To create a log analytics workspace a resource group is required. Please add ' \
+                       'decorator @{} in front of this preparer.'
+            raise CliTestError(template.format(ResourceGroupPreparer.__name__,
+                                               self.resource_group_parameter_name))
 
 # Utility
 

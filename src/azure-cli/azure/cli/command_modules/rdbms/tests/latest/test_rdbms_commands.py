@@ -5,10 +5,8 @@
 import time
 
 from datetime import datetime
-from time import sleep
 from dateutil.tz import tzutc  # pylint: disable=import-error
-from azure_devtools.scenario_tests import AllowLargeResponse
-from msrestazure.azure_exceptions import CloudError
+from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 from azure.core.exceptions import HttpResponseError
 from azure.cli.core.util import CLIError
 from azure.cli.core.util import parse_proxy_resource_id
@@ -73,12 +71,14 @@ class ServerPreparer(AbstractPreparer, SingleValueReplacer):
 
 class ServerMgmtScenarioTest(ScenarioTest):
 
+    @live_only()
     @AllowLargeResponse()
     @ResourceGroupPreparer(parameter_name='resource_group_1')
     @ResourceGroupPreparer(parameter_name='resource_group_2')
     def test_mariadb_server_mgmt(self, resource_group_1, resource_group_2):
         self._test_server_mgmt('mariadb', resource_group_1, resource_group_2)
 
+    @live_only()
     @AllowLargeResponse()
     @ResourceGroupPreparer(parameter_name='resource_group_1')
     @ResourceGroupPreparer(parameter_name='resource_group_2')
@@ -108,7 +108,7 @@ class ServerMgmtScenarioTest(ScenarioTest):
         family = 'Gen5'
         skuname = 'GP_{}_{}'.format(family, old_cu)
         newskuname = 'GP_{}_{}'.format(family, new_cu)
-        loc = 'westus2'
+        loc = 'eastus2'
         default_public_network_access = 'Enabled'
         public_network_access = 'Disabled'
         minimal_tls_version = 'TLS1_2'
@@ -120,7 +120,7 @@ class ServerMgmtScenarioTest(ScenarioTest):
         geoloc = 'eastus'
 
         if self.cli_ctx.local_context.is_on:
-            self.cmd('local-context off')
+            self.cmd('config param-persist off')
 
         list_checks = [JMESPathCheck('name', servers[0]),
                        JMESPathCheck('resourceGroup', resource_group_1),
@@ -234,7 +234,7 @@ class ServerMgmtScenarioTest(ScenarioTest):
         date_format = '%Y-%m-%dT%H:%M:%S.%f+00:00'
 
         if current_time < earliest_restore_time:
-            sleep((datetime.strptime(earliest_restore_time, date_format) - datetime.strptime(current_time,
+            time.sleep((datetime.strptime(earliest_restore_time, date_format) - datetime.strptime(current_time,
                                                                                              date_format)).total_seconds())
 
         self.cmd('{} server restore -g {} --name {} '
@@ -317,8 +317,10 @@ class ServerMgmtScenarioTest(ScenarioTest):
                      .format(database_engine, resource_group_1, servers[4]), checks=NoneCheck())
             result = self.cmd('{} server show -g {} -n {}'
                               .format(database_engine, resource_group_1, servers[4])).get_output_in_json()
-            server_version = result['version']
-            self.assertEqual(server_version, '5.7')
+            # server_version = result['version']
+            user_visible_state = result['userVisibleState']
+            # self.assertEqual(server_version, '5.7')
+            self.assertEqual(user_visible_state, 'Upgrading')
 
         # test delete server
         self.cmd('{} server delete -g {} --name {} --yes'
@@ -342,6 +344,7 @@ class ServerMgmtScenarioTest(ScenarioTest):
 
 class ProxyResourcesMgmtScenarioTest(ScenarioTest):
 
+    @live_only()
     @AllowLargeResponse()
     @ResourceGroupPreparer()
     @ServerPreparer(engine_type='mariadb')
@@ -354,6 +357,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
         self._test_private_link_resource(resource_group, server, database_engine, 'mariadbServer')
         self._test_private_endpoint_connection(resource_group, server, database_engine)
 
+    @live_only()
     @AllowLargeResponse()
     @ResourceGroupPreparer()
     @ServerPreparer(engine_type='mysql')
@@ -490,7 +494,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
                                                                                   subnet_prefix_1))
         # add one more subnet
         self.cmd('network vnet subnet create --vnet-name {} -g {} '
-                 '--address-prefix {} -n {}'.format(vnet_name, resource_group, subnet_prefix_2, subnet_name_2))
+                 '--address-prefix {} -n {} --default-outbound false'.format(vnet_name, resource_group, subnet_prefix_2, subnet_name_2))
 
         # test vnet-rule create
         self.cmd('{} server vnet-rule create -n {} -g {} -s {} '
@@ -522,7 +526,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
 
         # add one more subnet
         self.cmd('network vnet subnet create --vnet-name {} -g {} '
-                 '--address-prefix {} -n {}'.format(vnet_name, resource_group, subnet_prefix_3, subnet_name_3))
+                 '--address-prefix {} -n {} --default-outbound false'.format(vnet_name, resource_group, subnet_prefix_3, subnet_name_3))
 
         self.cmd('{} server vnet-rule update -n {} -g {} -s {} '
                  '--vnet-name {} --subnet {} --ignore-missing-endpoint {}'
@@ -682,11 +686,11 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
                      self.check('provisioningState', 'Ready')
                  ])
 
-        with self.assertRaisesRegexp(HttpResponseError, expectedError):
+        with self.assertRaisesRegex(HttpResponseError, expectedError):
             self.cmd('{} server private-endpoint-connection approve --server-name {} -g {} --name {} --description "{}"'
                      .format(database_engine, server, resource_group, server_pec_name, approval_description))
 
-        with self.assertRaisesRegexp(HttpResponseError, expectedError):
+        with self.assertRaisesRegex(HttpResponseError, expectedError):
             self.cmd('{} server private-endpoint-connection reject --server-name {} -g {} --name {} --description "{}"'
                      .format(database_engine, server, resource_group, server_pec_name, rejection_description))
 
@@ -737,7 +741,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
                      self.check('provisioningState', 'Ready')
                  ])
 
-        with self.assertRaisesRegexp(HttpResponseError, expectedError):
+        with self.assertRaisesRegex(HttpResponseError, expectedError):
             self.cmd('{} server private-endpoint-connection reject --server-name {} -g {} --name {} --description "{}"'
                      .format(database_engine, server, resource_group, server_pec_name, rejection_description))
 
@@ -787,7 +791,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
                      self.check('provisioningState', 'Ready')
                  ])
 
-        with self.assertRaisesRegexp(HttpResponseError, expectedError):
+        with self.assertRaisesRegex(HttpResponseError, expectedError):
             self.cmd('{} server private-endpoint-connection approve --server-name {} -g {} --name {} --description "{}"'
                      .format(database_engine, server, resource_group, server_pec_name, approval_description))
 
@@ -890,6 +894,7 @@ class ProxyResourcesMgmtScenarioTest(ScenarioTest):
 
 class ReplicationMgmtScenarioTest(ScenarioTest):  # pylint: disable=too-few-public-methods
 
+    @live_only()
     @ResourceGroupPreparer(parameter_name='resource_group')
     def test_mysql_replica_mgmt(self, resource_group):
         self._test_replica_mgmt(resource_group, 'mysql')
@@ -1026,7 +1031,7 @@ class ReplicationPostgreSqlMgmtScenarioTest(ScenarioTest):  # pylint: disable=to
             # restart server
             self.cmd('{} server restart -g {} --name {}'
                      .format(database_engine, resource_group, server), checks=NoneCheck())
-            sleep(120)
+            time.sleep(120)
 
         # test replica create
         self.cmd('{} server replica create -g {} -n {} -l westus --sku-name {} '

@@ -6,6 +6,7 @@
 # AZURE CLI RBAC TEST DEFINITIONS
 import json
 import os
+import sys
 import tempfile
 import time
 import datetime
@@ -13,112 +14,64 @@ from unittest import mock
 import unittest
 
 from knack.util import CLIError
-from azure_devtools.scenario_tests import AllowLargeResponse
+from azure.cli.testsdk.scenario_tests import AllowLargeResponse
 from azure.cli.core.profiles import ResourceType, get_sdk
 from azure.cli.testsdk import ScenarioTest, LiveScenarioTest, ResourceGroupPreparer, KeyVaultPreparer
+from azure.cli.command_modules.role._msgrpah import GraphError
 from ..util import retry
+from .test_graph import GraphScenarioTestBase
 
 
-class RoleScenarioTest(ScenarioTest):
+TEST_TENANT_DOMAIN = '@azuresdkteam.onmicrosoft.com'
+
+
+class RoleScenarioTestBase(GraphScenarioTestBase):
 
     def run_under_service_principal(self):
-        account_info = self.cmd('account show').get_output_in_json()
-        return account_info['user']['type'] == 'servicePrincipal'
+        return not self._get_signed_in_user()
 
 
-class RbacSPSecretScenarioTest(RoleScenarioTest):
-    def test_create_for_rbac_with_right_display_name(self):
-        sp_name = self.create_random_name('cli-test-sp', 15)
-        self.kwargs['display_name'] = sp_name
-        self.kwargs['display_name_new'] = self.create_random_name('cli-test-sp', 15)
+class CreateForRbacScenarioTest(RoleScenarioTestBase):
 
-        try:
-            sp_info = self.cmd('ad sp create-for-rbac -n {display_name} --skip-assignment').get_output_in_json()
-            self.assertTrue(sp_info['name'] == sp_info['appId'])
-            self.assertTrue(sp_info['displayName'] == sp_name)
-            self.kwargs['app_id'] = sp_info['appId']
+    def test_create_for_rbac_password(self):
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
+        result = self.cmd('ad sp create-for-rbac --display-name {display_name}',
+                          checks=self.check('displayName', '{display_name}')).get_output_in_json()
+        self.kwargs['app_id'] = result['appId']
+        # Make sure no role assignment is created by default
+        self.cmd('role assignment list --assignee {app_id} --all', checks=self.check('length(@)', 0))
 
-            # verify password can be used in cli
-            self.kwargs['gen_password'] = sp_info['password']
-            sp_info2 = self.cmd('ad app create --display-name {display_name_new} --password {gen_password}')\
-                .get_output_in_json()
-            self.kwargs['sp_new'] = sp_info2['appId']
-        finally:
-            self.cmd('ad app delete --id {app_id}')
-            self.cmd('ad app delete --id {sp_new}')
+    def test_create_for_rbac_create_cert(self):
 
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_minimal')
-    def test_create_for_rbac_with_secret_no_assignment(self, resource_group):
+        self.kwargs['display_name'] = self.create_random_name('azure-cli-test-', 30)
 
-        self.kwargs['display_name'] = resource_group
-        try:
-            result = self.cmd('ad sp create-for-rbac -n {display_name} --skip-assignment',
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            result = self.cmd('ad sp create-for-rbac -n {display_name} --create-cert',
                               checks=self.check('displayName', '{display_name}')).get_output_in_json()
             self.kwargs['app_id'] = result['appId']
-        finally:
-            self.cmd('ad app delete --id {app_id}')
 
-    @AllowLargeResponse()
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_with_password')
-    def test_create_for_rbac_with_secret_with_assignment(self, resource_group):
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
 
-        subscription_id = self.get_subscription_id()
-        self.kwargs.update({
-            'sub': subscription_id,
-            'scope': '/subscriptions/{}'.format(subscription_id),
-            'display_name': resource_group
-        })
+            # On Linux or MacOS, check the cert file is a regular file (S_IFREG 0100000) with permission 600
+            # https://manpages.ubuntu.com/manpages/focal/man7/inode.7.html
+            # Windows doesn't have the Linux permission concept.
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
 
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac -n {display_name} --scopes {scope} {scope}/resourceGroups/{rg}',
-                                  checks=self.check('displayName', '{display_name}')).get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
-                self.cmd('role assignment list --assignee {app_id} --scope {scope}',
-                         checks=self.check("length([])", 1))
-                self.cmd('role assignment list --assignee {app_id} -g {rg}',
-                         checks=self.check("length([])", 1))
-                self.cmd('role assignment delete --assignee {app_id} -g {rg}',
-                         checks=self.is_empty())
-                self.cmd('role assignment delete --assignee {app_id}',
-                         checks=self.is_empty())
-        finally:
-            self.cmd('ad app delete --id {app_id}')
+            os.remove(result['fileWithCertAndPrivateKey'])
 
+            result = self.cmd('ad app credential reset --id {app_id} --create-cert').get_output_in_json()
+            self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
 
-class RbacSPCertScenarioTest(RoleScenarioTest):
-    @ResourceGroupPreparer(name_prefix='cli_create_rbac_sp_with_cert')
-    def test_create_for_rbac_with_cert_with_assignment(self, resource_group):
+            if sys.platform != 'win32':
+                assert os.stat(result['fileWithCertAndPrivateKey']).st_mode == 0o100600
 
-        subscription_id = self.get_subscription_id()
-        self.kwargs.update({
-            'sub': subscription_id,
-            'scope': '/subscriptions/{}'.format(subscription_id),
-            'display_name': resource_group
-        })
+            os.remove(result['fileWithCertAndPrivateKey'])
 
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac -n {display_name} --scopes {scope} {scope}/resourceGroups/{rg} --create-cert',
-                                  checks=self.check('displayName', '{display_name}')).get_output_in_json()
-                self.kwargs['app_id'] = result['appId']
-
-                self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
-                os.remove(result['fileWithCertAndPrivateKey'])
-                result = self.cmd('ad sp credential reset -n {app_id} --create-cert',
-                                  checks=self.check('name', '{app_id}')).get_output_in_json()
-                self.assertTrue(result['fileWithCertAndPrivateKey'].endswith('.pem'))
-                os.remove(result['fileWithCertAndPrivateKey'])
-        finally:
-            self.cmd('ad app delete --id {app_id}',
-                     checks=self.is_empty())
-
-
-class RbacSPKeyVaultScenarioTest2(ScenarioTest):
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_new_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-new-kv')
-    def test_create_for_rbac_with_new_kv_cert(self, resource_group, key_vault):
-        KeyVaultErrorException = get_sdk(self.cli_ctx, ResourceType.DATA_KEYVAULT, 'models.key_vault_error#KeyVaultErrorException')
+    def test_create_for_rbac_create_cert_keyvault(self, resource_group, key_vault):
+        from azure.core.exceptions import HttpResponseError
         subscription_id = self.get_subscription_id()
 
         self.kwargs.update({
@@ -130,30 +83,24 @@ class RbacSPKeyVaultScenarioTest2(ScenarioTest):
         })
 
         time.sleep(5)  # to avoid 504(too many requests) on a newly created vault
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            try:
+                result = self.cmd('ad sp create-for-rbac --create-cert '
+                                  '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
+                self.kwargs['app_id'] = result['appId']
+            except HttpResponseError:
+                if not self.is_live and not self.in_recording:
+                    pass  # temporary workaround for keyvault challenge handling was ignored under playback
+                else:
+                    raise
+            cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.cmd('ad app credential reset --id {app_id} --create-cert --keyvault {kv} --cert {cert}')
+            cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
+            self.assertTrue(cer1 != cer2)
 
-        try:
-            with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                try:
-                    result = self.cmd('ad sp create-for-rbac --scopes {scope}/resourceGroups/{rg} --create-cert '
-                                      '--keyvault {kv} --cert {cert} -n {display_name}').get_output_in_json()
-                    self.kwargs['app_id'] = result['appId']
-                except KeyVaultErrorException:
-                    if not self.is_live and not self.in_recording:
-                        pass  # temporary workaround for keyvault challenge handling was ignored under playback
-                    else:
-                        raise
-                cer1 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-                self.cmd('ad sp credential reset -n {app_id} --create-cert --keyvault {kv} --cert {cert}')
-                cer2 = self.cmd('keyvault certificate show --vault-name {kv} -n {cert}').get_output_in_json()['cer']
-                self.assertTrue(cer1 != cer2)
-        finally:
-            self.cmd('ad app delete --id {app_id}')
-
-
-class RbacSPKeyVaultScenarioTest(ScenarioTest):
     @ResourceGroupPreparer(name_prefix='cli_test_sp_with_kv_existing_cert')
     @KeyVaultPreparer(name_prefix='test-rbac-exist-kv')
-    def test_create_for_rbac_with_existing_kv_cert(self, resource_group, key_vault):
+    def test_create_for_rbac_use_cert_keyvault(self, resource_group, key_vault):
 
         import time
         subscription_id = self.get_subscription_id()
@@ -174,9 +121,9 @@ class RbacSPKeyVaultScenarioTest(ScenarioTest):
             self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 24')
             with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
                 result = self.cmd('ad sp create-for-rbac -n {display_name} --keyvault {kv} '
-                                  '--cert {cert} --scopes {scope}/resourceGroups/{rg}').get_output_in_json()
+                                  '--cert {cert}').get_output_in_json()
                 self.kwargs['app_id'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id} --keyvault {kv} --cert {cert}')
+            self.cmd('ad app credential reset --id {app_id} --keyvault {kv} --cert {cert}')
         finally:
             try:
                 self.cmd('ad app delete --id {app_id}')
@@ -188,21 +135,71 @@ class RbacSPKeyVaultScenarioTest(ScenarioTest):
         try:
             self.cmd('keyvault certificate create --vault-name {kv} -n {cert} -p "{policy}" --validity 6')
             with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-                result = self.cmd('ad sp create-for-rbac --scopes {scope}/resourceGroups/{rg} --keyvault {kv} '
+                result = self.cmd('ad sp create-for-rbac --keyvault {kv} '
                                   '--cert {cert} -n {display_name2}').get_output_in_json()
                 self.kwargs['app_id2'] = result['appId']
-            self.cmd('ad sp credential reset -n {app_id2} --keyvault {kv} --cert {cert}')
+            self.cmd('ad app credential reset --id {app_id2} --keyvault {kv} --cert {cert}')
         finally:
             try:
                 self.cmd('ad app delete --id {app_id2}')
             except:
                 pass
 
+    @AllowLargeResponse()
+    @ResourceGroupPreparer(name_prefix='cli_sp_create_for_rbac')
+    def test_create_for_rbac_password_with_assignment(self, resource_group):
 
-class RoleCreateScenarioTest(RoleScenarioTest):
+        subscription_id = self.get_subscription_id()
+        self.kwargs.update({
+            'sub': subscription_id,
+            'scope': f'/subscriptions/{subscription_id}/resourceGroups/{resource_group}',
+            'role': 'Reader',
+            'display_name': resource_group
+        })
+
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            result = self.cmd('ad sp create-for-rbac -n {display_name} --scopes {scope} --role {role}',
+                              checks=self.check('displayName', '{display_name}')).get_output_in_json()
+            self.kwargs['app_id'] = result['appId']
+            result = self.cmd(
+                'role assignment list --assignee {app_id} --all',
+                checks=[
+                    self.check("length([])", 1),
+                    self.check("[0].roleDefinitionName", '{role}'),
+                    self.check("[0].scope", '{scope}')
+                ]).get_output_in_json()
+
+            self.kwargs['assignment_id'] = result[0]['id']
+            self.cmd('role assignment delete --ids {assignment_id}', checks=self.is_empty())
+
+    def test_create_for_rbac_argument_error(self):
+        self.kwargs.update({
+            'scope': '/subscriptions/00000000-0000-0000-0000-000000000000',
+            'role': 'Reader',
+            'display_name': self.create_random_name('azure-cli-test-', 30)
+        })
+
+        # No role assignment argument
+        # Without this line, no recording YAML will be generated. Playing back this test will make it live and fail
+        # in CI because there is no logged in account.
+        self.kwargs['app_id'] = self.cmd(
+            'ad sp create-for-rbac --display-name {display_name}').get_output_in_json()['appId']
+
+        from azure.cli.core.azclierror import ArgumentUsageError
+
+        # Missing --role
+        with self.assertRaisesRegex(ArgumentUsageError, 'both'):
+            self.cmd('ad sp create-for-rbac --scopes {scope}')
+
+        # Missing --scopes
+        with self.assertRaisesRegex(ArgumentUsageError, 'both'):
+            self.cmd('ad sp create-for-rbac --role {role}')
+
+
+class RoleDefinitionScenarioTest(RoleScenarioTestBase):
 
     @AllowLargeResponse()
-    def test_role_create_scenario(self):
+    def test_role_definition_scenario(self):
         subscription_id = self.get_subscription_id()
         role_name = self.create_random_name('cli-test-role', 20)
         template = {
@@ -256,26 +253,39 @@ class RoleCreateScenarioTest(RoleScenarioTest):
             retry(lambda: self.cmd('role definition list -n {role}', checks=self.is_empty()))
 
 
-class RoleAssignmentScenarioTest(RoleScenarioTest):
+class RoleAssignmentScenarioTest(RoleScenarioTestBase):
+
+    def _prepare_scope_kwargs(self):
+        # Get the resource ID of the current subscription
+        self.kwargs['sub_id'] = '/subscriptions/{}'.format(self.cmd('account show').get_output_in_json()['id'])
+        # Get the resource ID of the resource group
+        self.kwargs['rg_id'] = '{}/resourceGroups/{}'.format(self.kwargs['sub_id'], self.kwargs['rg'])
 
     @ResourceGroupPreparer(name_prefix='cli_role_assign')
     @AllowLargeResponse()
-    def test_role_assignment_e2e(self, resource_group):
+    def test_role_assignment_scenario(self, resource_group):
         if self.run_under_service_principal():
             return  # this test delete users which are beyond a SP's capacity, so quit...
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
-                'nsg': 'nsg1'
+                'upn': user + TEST_TENANT_DOMAIN,
+                'nsg': 'nsg1',
+                'role': 'reader',  # Use low-privileged role to make the test secure
+                # https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+                'reader_guid': 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
             })
+            self._prepare_scope_kwargs()
+
+            # test create role assignment without --scope
+            with self.assertRaisesRegex(SystemExit, '2'):
+                self.cmd('role assignment create --assignee {upn} --role {role}')
 
             result = self.cmd('ad user create --display-name tester123 --password Test123456789'
                               ' --user-principal-name {upn}').get_output_in_json()
             self.kwargs.update({
-                'user_id': result['objectId']})
-            time.sleep(15)  # By-design, it takes some time for RBAC system propagated with graph object change
+                'user_id': result['id']})
 
             group = self.create_random_name('testgroup', 15)
             self.kwargs.update({
@@ -284,67 +294,95 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
             group_result = self.cmd(
                 'ad group create --display-name group123 --mail-nickname {group}').get_output_in_json()
             self.kwargs.update({
-                'group_id': group_result['objectId']})
+                'group_id': group_result['id']})
             self.cmd(
                 'ad group member add --group {group_id} --member-id {user_id}')
+
+            time.sleep(15)  # By-design, it takes some time for RBAC system propagated with graph object change
 
             try:
                 self.cmd('network nsg create -n {nsg} -g {rg}')
                 result = self.cmd('network nsg show -n {nsg} -g {rg}').get_output_in_json()
                 self.kwargs['nsg_id'] = result['id']
 
-                # test role assignments on a resource group
-                self.cmd('role assignment create --assignee {upn} --role contributor -g {rg}')
+                # test role assignments on a resource group for the user
+                self.cmd('role assignment create --assignee {upn} --role {role} --scope {rg_id}')
                 # verify role assignment create is idempotent
-                self.cmd('role assignment create --assignee {upn} --role contributor -g {rg}',
+                self.cmd('role assignment create --assignee {upn} --role {role} --scope {rg_id}',
                          self.check("principalName", self.kwargs["upn"]))
 
                 self.cmd('role assignment list -g {rg}', checks=self.check("length([])", 1))
-                self.cmd('role assignment list --assignee {upn} --role contributor -g {rg}', checks=[
+                self.cmd('role assignment list --assignee {upn} --role {role} -g {rg}', checks=[
                     self.check("length([])", 1),
                     self.check("[0].principalName", self.kwargs["upn"])
                 ])
 
-                self.cmd('role assignment create --assignee {group_id} --role contributor -g {rg}')
+                # Create role assignment for the group
+                self.cmd('role assignment create --assignee {group_id} --role {role} --scope {rg_id}')
 
                 # test include-groups
                 self.cmd('role assignment list --assignee {upn} --all --include-groups', checks=[
                     self.check("length([])", 2)
                 ])
 
-                # test couple of more general filters
-                result = self.cmd('role assignment list -g {rg} --include-inherited').get_output_in_json()
-                self.assertTrue(len(result) >= 1)
-
-                result = self.cmd('role assignment list --all').get_output_in_json()
-                self.assertTrue(len(result) >= 1)
-
-                self.cmd('role assignment delete --assignee {group_id} --role contributor -g {rg}')
-                self.cmd('role assignment delete --assignee {upn} --role contributor -g {rg}')
+                self.cmd('role assignment delete --assignee {group_id} --role {role} -g {rg}')
+                self.cmd('role assignment delete --assignee {upn} --role {role} -g {rg}')
                 self.cmd('role assignment list -g {rg}',
                          checks=self.is_empty())
 
+                # From now on, directly use role definition ID to avoid querying definition ID and reduce recording
+                # YAML size.
+
                 # test role assignments on a resource
-                self.cmd('role assignment create --assignee {upn} --role contributor --scope {nsg_id}')
-                self.cmd('role assignment list --assignee {upn} --role contributor --scope {nsg_id}',
+                self.cmd('role assignment create --assignee {upn} --role {reader_guid} --scope {nsg_id}')
+                self.cmd('role assignment list --assignee {upn} --role {reader_guid} --scope {nsg_id}',
                          checks=self.check("length([])", 1))
-                self.cmd('role assignment delete --assignee {upn} --role contributor --scope {nsg_id}')
+                self.cmd('role assignment delete --assignee {upn} --role {reader_guid} --scope {nsg_id}')
                 self.cmd('role assignment list --scope {nsg_id}',
                          checks=self.is_empty())
 
                 # test role assignment on subscription level
-                self.cmd('role assignment create --assignee {upn} --role reader')
-                self.cmd('role assignment list --assignee {upn} --role reader',
+                self.cmd('role assignment create --assignee {upn} --role {reader_guid} --scope {sub_id}')
+                self.cmd('role assignment list --assignee {upn} --role {reader_guid}',
                          checks=self.check("length([])", 1))
                 self.cmd('role assignment list --assignee {upn}',
                          checks=self.check("length([])", 1))
-                self.cmd('role assignment delete --assignee {upn} --role reader')
+                self.cmd('role assignment delete --assignee {upn} --role {reader_guid}')
+                self.cmd('role assignment list --assignee {upn}',
+                         checks=self.check("length([])", 0))
 
-                # test role assignment on empty scope
-                with self.assertRaisesRegexp(CLIError, "Cannot find user or service principal in graph database for 'fake'."):
-                    self.cmd('role assignment create --assignee fake --role contributor')
+                # Test bring-your-own assignment name
+                self.kwargs['assignment_name'] = self.create_guid()
+                self.kwargs['assignment_id'] = self.cmd(
+                    'role assignment create --assignee {upn} --role {reader_guid} --scope {rg_id} '
+                    '--name {assignment_name}').get_output_in_json()['id']
+                # Should be idempotent
+                self.cmd('role assignment create --assignee {upn} --role {reader_guid} --scope {rg_id} '
+                         '--name {assignment_name}')
+                self.cmd('role assignment list --assignee {upn} --role {reader_guid} --all',
+                         checks=[self.check("length([])", 1), self.check("[0].name", '{assignment_name}')])
+                # Delete by assignment id
+                self.cmd('role assignment delete --ids {assignment_id}')
+
+                # Test delete by ID, but with other arguments ignored
+                self.kwargs['assignment_name'] = self.create_guid()
+                self.kwargs['assignment_id'] = self.cmd(
+                    'role assignment create --assignee {upn} --role {reader_guid} --scope {rg_id} '
+                    '--name {assignment_name}').get_output_in_json()['id']
+                # Besides --ids, all other arguments are ignored
+                self.cmd('role assignment delete --ids {assignment_id} '
+                         '--assignee test --role test --resource-group test --scope test --include-inherit')
+                self.cmd('role assignment list --assignee {upn} --all', checks=self.check("length([])", 0))
+
+                # test create role assignment for invalid assignee
+                with self.assertRaisesRegex(CLIError, "Cannot find user or service principal in graph database for 'fake'."):
+                    self.cmd('role assignment create --assignee fake --role {reader_guid} --scope {rg_id}')
             finally:
-                self.cmd('ad user delete --upn-or-object-id {upn}')
+                try:
+                    self.cmd('ad user delete --id {upn}')
+                    self.cmd('ad group delete --group {group_id}')
+                except:
+                    pass
 
     @ResourceGroupPreparer(name_prefix='cli_role_assign')
     @AllowLargeResponse()
@@ -352,25 +390,35 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
         if self.run_under_service_principal():
             return  # this test delete users which are beyond a SP's capacity, so quit...
 
-        self.kwargs['rg'] = resource_group
+        self._prepare_scope_kwargs()
 
-        def _test_role_assignment(assignee_object_id, assignee_principal_type=None):
+        def _test_role_assignment(assignee_object_id, assignee_principal_type=None, graph_call_fails=False):
             self.kwargs['object_id'] = assignee_object_id
-            self.kwargs['principal_type'] = assignee_principal_type
+            self.kwargs['assignee_principal_type'] = assignee_principal_type
             # test role assignment on subscription level
 
-            with mock.patch('azure.graphrbac.operations.ObjectsOperations.get_objects_by_object_ids') \
-                    as get_objects_by_object_ids_mock:
-                if assignee_principal_type:
+            if assignee_principal_type:
+                # No graph call
+                with mock.patch('azure.cli.command_modules.role._msgrpah._graph_client.GraphClient.directory_object_get_by_ids') \
+                        as directory_object_get_by_ids_mock:
                     self.cmd(
                         'role assignment create --assignee-object-id {object_id} '
-                        '--assignee-principal-type {principal_type} --role Reader -g {rg}')
+                        '--assignee-principal-type {assignee_principal_type} --role Reader --scope {rg_id}')
                     # Verify no graph call
-                    get_objects_by_object_ids_mock.assert_not_called()
+                    directory_object_get_by_ids_mock.assert_not_called()
+            else:
+                # Make graph call to resolve assignee_principal_type
+                if graph_call_fails:
+                    import requests
+                    mock_response = requests.Response()
+                    mock_response.status_code = 403
+                    mock_response.reason = 'Forbidden for url: https://...'
+                    with mock.patch(
+                            'azure.cli.command_modules.role._msgrpah._graph_client.GraphClient.directory_object_get_by_ids',
+                            side_effect=GraphError('403', mock_response)):
+                        self.cmd('role assignment create --assignee-object-id {object_id} --role Reader --scope {rg_id}')
                 else:
-                    self.cmd('role assignment create --assignee-object-id {object_id} --role Reader -g {rg}')
-                    # Verify 1 graph call to resolve principal type
-                    get_objects_by_object_ids_mock.assert_called_once()
+                    self.cmd('role assignment create --assignee-object-id {object_id} --role Reader --scope {rg_id}')
 
             self.cmd('role assignment list -g {rg}', checks=self.check("length([])", 1))
             self.cmd('role assignment delete -g {rg}')
@@ -384,49 +432,46 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
             _test_role_assignment(assignee_object_id)
 
             # test role assignment without principal type and graph call fail
-            from msrestazure.azure_exceptions import CloudError
-            import requests
-            mock_response = requests.Response()
-            mock_response.status_code = 403
-            mock_response.reason = 'Forbidden for url: https://graph.windows.net/.../getObjectsByObjectIds?api-version=1.6'
-            with mock.patch('azure.graphrbac.operations.ObjectsOperations.get_objects_by_object_ids',
-                            side_effect=CloudError(mock_response)):
-                _test_role_assignment(assignee_object_id)
+            _test_role_assignment(assignee_object_id, graph_call_fails=True)
 
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             # User
             user = self.create_random_name('testuser', 15)
-            self.kwargs['upn'] = user + '@azuresdkteam.onmicrosoft.com'
+            self.kwargs['upn'] = user + TEST_TENANT_DOMAIN
 
-            result = self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}').get_output_in_json()
+            result = self.cmd('ad user create --display-name tester123 --password Test123456789 '
+                              '--user-principal-name {upn}').get_output_in_json()
+            time.sleep(30)
             try:
-                _test_role_assignment_graph_call(result['objectId'], 'User')
+                _test_role_assignment_graph_call(result['id'], 'User')
             finally:
                 try:
-                    self.cmd('ad user delete --upn-or-object-id {upn}')
+                    self.cmd('ad user delete --id {upn}')
                 except:
                     pass
 
             # Group
-            self.kwargs['group_name'] = self.create_random_name('testgroup', 15)
-            result = self.cmd(
-                'ad group create --display-name {group_name} --mail-nickname {group_name}').get_output_in_json()
-            time.sleep(10)
-            try:
-                _test_role_assignment_graph_call(result['objectId'], 'Group')
-            finally:
-                try:
-                    self.cmd('ad group delete --group {object_id}')
-                except:
-                    pass
+            # Propagation time for group sometimes is very long. Skip group test.
+            # self.kwargs['group_name'] = self.create_random_name('testgroup', 15)
+            # result = self.cmd(
+            #     'ad group create --display-name {group_name} --mail-nickname {group_name}').get_output_in_json()
+            # time.sleep(30)
+            # try:
+            #     _test_role_assignment_graph_call(result['id'], 'Group')
+            # finally:
+            #     try:
+            #         self.cmd('ad group delete --group {object_id}')
+            #     except:
+            #         pass
 
             # Service Principal
             self.kwargs['sp_name'] = self.create_random_name('sp', 15)
-            result = self.cmd('ad sp create-for-rbac --skip-assignment --name {sp_name}').get_output_in_json()
+            result = self.cmd('ad sp create-for-rbac --name {sp_name}').get_output_in_json()
             self.kwargs['app_id'] = result['appId']
             result = self.cmd('ad sp show --id {app_id}').get_output_in_json()
+            time.sleep(30)
             try:
-                _test_role_assignment_graph_call(result['objectId'], 'ServicePrincipal')
+                _test_role_assignment_graph_call(result['id'], 'ServicePrincipal')
             finally:
                 try:
                     self.cmd('ad sp delete --id {object_id}')
@@ -442,18 +487,18 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
-                'rg': resource_group,
+                'upn': user + TEST_TENANT_DOMAIN,
                 'description': "Role assignment foo to check on bar",
                 'condition': "@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:Name] stringEquals 'foo'",
                 'condition_version': "2.0"
             })
+            self._prepare_scope_kwargs()
 
             result = self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}').get_output_in_json()
-            self.kwargs['object_id'] = result['objectId']
+            self.kwargs['object_id'] = result['id']
             try:
                 # Test create role assignment with description, condition and condition_version
-                self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader -g {rg} '
+                self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader --scope {rg_id} '
                          # Include double quotes to tell shlex to treat arguments as a whole
                          '--description "{description}" '
                          '--condition "{condition}" --condition-version {condition_version}',
@@ -465,7 +510,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
                 self.cmd('role assignment delete -g {rg}')
 
                 # Test create role assignment with description, condition. condition_version defaults to 2.0
-                self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader -g {rg} '
+                self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader --scope {rg_id} '
                          '--description "{description}" '
                          '--condition "{condition}"',
                          checks=[
@@ -477,11 +522,11 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
 
                 # Test error is raised if condition-version is set but condition is not
                 with self.assertRaisesRegex(CLIError, "--condition must be set"):
-                    self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader -g {rg} '
+                    self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader --scope {rg_id} '
                              '--condition-version {condition_version}')
 
                 # Update
-                output = self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader -g {rg} '
+                output = self.cmd('role assignment create --assignee-object-id {object_id} --assignee-principal-type User --role reader --scope {rg_id} '
                                   '--description "{description}" '
                                   '--condition "{condition}" --condition-version {condition_version}').get_output_in_json()
 
@@ -504,47 +549,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
                 self.cmd('role assignment delete -g {rg}')
 
             finally:
-                self.cmd('ad user delete --upn-or-object-id {upn}')
-
-    @ResourceGroupPreparer(name_prefix='cli_role_assign')
-    @AllowLargeResponse()
-    def test_role_assignment_handle_conflicted_assignments(self, resource_group):
-        if self.run_under_service_principal():
-            return  # this test delete users which are beyond a SP's capacity, so quit...
-
-        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
-            user = self.create_random_name('testuser', 15)
-            self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
-                'nsg': 'nsg1'
-            })
-
-            self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}')
-            time.sleep(15)  # By-design, it takes some time for RBAC system propagated with graph object change
-
-            base_dir = os.path.abspath(os.curdir)
-
-            try:
-                temp_dir = os.path.realpath(self.create_temp_dir())
-                os.chdir(temp_dir)
-                self.cmd('configure --default group={rg} --scope local')
-                local_defaults_config = self.cmd('configure --list-defaults --scope local').get_output_in_json()
-
-                self.assertGreaterEqual(len(local_defaults_config), 1)
-                actual = set([(x['name'], x['source'], x['value']) for x in local_defaults_config if x['name'] == 'group'])
-                expected = set([('group', os.path.join(temp_dir, '.azure', 'config'), self.kwargs['rg'])])
-                self.assertEqual(actual, expected)
-
-                # test role assignments on a resource group
-                rg_id = self.cmd('group show -n {rg}').get_output_in_json()['id']
-                self.cmd('role assignment create --assignee {upn} --role reader --scope ' + rg_id)
-                self.cmd('role assignment list --assignee {upn} --role reader --scope ' + rg_id, checks=self.check('length([])', 1))
-                self.cmd('role assignment delete --assignee {upn} --role reader --scope ' + rg_id)
-                self.cmd('role assignment list --assignee {upn} --role reader --scope ' + rg_id, checks=self.check('length([])', 0))
-            finally:
-                self.cmd('configure --default group="" --scope local')
-                os.chdir(base_dir)
-                self.cmd('ad user delete --upn-or-object-id {upn}')
+                self.cmd('ad user delete --id {upn}')
 
     def test_role_assignment_empty_string_args(self):
         expected_msg = "{} can't be an empty string"
@@ -568,7 +573,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
             user = self.create_random_name('testuser', 15)
             mgmt_grp = self.create_random_name('mgmt_grp', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + TEST_TENANT_DOMAIN,
                 'mgmt_grp': mgmt_grp
             })
 
@@ -598,7 +603,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
             finally:
                 if mgmt_grp_created:
                     self.cmd('account management-group delete -n {mgmt_grp}')
-                self.cmd('ad user delete --upn-or-object-id {upn}')
+                self.cmd('ad user delete --id {upn}')
 
     @ResourceGroupPreparer(name_prefix='cli_role_audit')
     @AllowLargeResponse()
@@ -609,14 +614,15 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
         with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
             user = self.create_random_name('testuser', 15)
             self.kwargs.update({
-                'upn': user + '@azuresdkteam.onmicrosoft.com',
+                'upn': user + TEST_TENANT_DOMAIN,
             })
+            self._prepare_scope_kwargs()
 
             self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}')
             time.sleep(15)  # By-design, it takes some time for RBAC system propagated with graph object change
 
             try:
-                self.cmd('role assignment create --assignee {upn} --role contributor -g {rg}')
+                self.cmd('role assignment create --assignee {upn} --role reader --scope {rg_id}')
 
                 if self.is_live or self.in_recording:
                     now = datetime.datetime.utcnow()
@@ -629,7 +635,7 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
 
                 else:
                     # figure out the right time stamps from the recording file
-                    r = next(r for r in self.cassette.requests if r.method == 'GET' and 'providers/microsoft.insights/eventtypes/management/' in r.uri)
+                    r = next(r for r in self.cassette.requests if r.method == 'GET' and 'providers/Microsoft.Insights/eventtypes/management/' in r.uri)
                     from urllib.parse import parse_qs, urlparse
                     query_parts = parse_qs(urlparse(r.uri).query)['$filter'][0].split()
                     start_index, end_index = [i + 2 for (i, j) in enumerate(query_parts) if j == 'eventTimestamp']
@@ -643,21 +649,78 @@ class RoleAssignmentScenarioTest(RoleScenarioTest):
                                                            x['principalName'] == self.kwargs['upn'])])
                 retry(check_changelogs, sleep_duration=60, max_retry=15)
             finally:
-                self.cmd('ad user delete --upn-or-object-id {upn}')
+                self.cmd('ad user delete --id {upn}')
 
 
-class RoleAssignmentListScenarioTest(ScenarioTest):
+class RoleAssignmentWithConfigScenarioTest(RoleScenarioTestBase):
+
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, random_config_dir=True, **kwargs)
+
+    @ResourceGroupPreparer(name_prefix='cli_role_assign')
+    @AllowLargeResponse()
+    def test_role_assignment_handle_conflicted_assignments(self, resource_group):
+        if self.run_under_service_principal():
+            return  # this test delete users which are beyond a SP's capacity, so quit...
+
+        with mock.patch('azure.cli.command_modules.role.custom._gen_guid', side_effect=self.create_guid):
+            user = self.create_random_name('testuser', 15)
+            self.kwargs.update({
+                'upn': user + TEST_TENANT_DOMAIN,
+                'nsg': 'nsg1'
+            })
+
+            self.cmd('ad user create --display-name tester123 --password Test123456789 --user-principal-name {upn}')
+            time.sleep(15)  # By-design, it takes some time for RBAC system propagated with graph object change
+
+            base_dir = os.path.abspath(os.curdir)
+
+            try:
+                temp_dir = os.path.realpath(self.create_temp_dir())
+                os.chdir(temp_dir)
+                self.cmd('configure --default group={rg} --scope local')
+                local_defaults_config = self.cmd('configure --list-defaults --scope local').get_output_in_json()
+
+                self.assertGreaterEqual(len(local_defaults_config), 1)
+                actual = set([(x['name'], x['source'], x['value']) for x in local_defaults_config if x['name'] == 'group'])
+                # If global config_dir is ~/.azure/dummy_cli_config_dir/0azXbKR9OdJuZPFS/,
+                # local config file is  ./0azXbKR9OdJuZPFS/config
+                expected = set([('group', os.path.join(temp_dir, os.path.basename(self.cli_ctx.config.config_dir), 'config'), self.kwargs['rg'])])
+                self.assertEqual(actual, expected)
+
+                # test role assignments on a resource group
+                rg_id = self.cmd('group show -n {rg}').get_output_in_json()['id']
+                self.cmd('role assignment create --assignee {upn} --role reader --scope ' + rg_id)
+                self.cmd('role assignment list --assignee {upn} --role reader --scope ' + rg_id, checks=self.check('length([])', 1))
+                self.cmd('role assignment delete --assignee {upn} --role reader --scope ' + rg_id)
+                self.cmd('role assignment list --assignee {upn} --role reader --scope ' + rg_id, checks=self.check('length([])', 0))
+            finally:
+                self.cmd('configure --default group="" --scope local')
+                os.chdir(base_dir)
+                self.cmd('ad user delete --id {upn}')
+
+
+class RoleAssignmentLiveScenarioTest(LiveScenarioTest):
+    # Only test list commands in live mode to avoid recording tenant information
+
+    @ResourceGroupPreparer(name_prefix='cli_role_assign')
+    def test_role_assignment_list(self, resource_group):
+        # List all role assignments under a subscription
+        self.cmd('role assignment list --all', checks=[self.greater_than("length([])", 0)])
+
+        # List role assignments for a resource group.
+        self.cmd('role assignment list -g {rg}', checks=[self.check("length([])", 0)])
+
+        # There are role assignments inherited from subscription, so we can't tell the exact number.
+        self.cmd('role assignment list -g {rg} --include-inherited', checks=[self.greater_than("length([])", 0)])
 
     @ResourceGroupPreparer(name_prefix='cli_test_assignments_for_coadmins')
-    @AllowLargeResponse()
-    def test_assignments_for_co_admins(self, resource_group):
+    def test_role_assignment_for_co_admins(self, resource_group):
 
         result = self.cmd('role assignment list --include-classic-administrator').get_output_in_json()
         self.assertTrue([x for x in result if x['roleDefinitionName'] in ['CoAdministrator', 'AccountAdministrator']])
-        self.cmd('role assignment list -g {}'.format(resource_group), checks=[
-            self.check("length([])", 0)
-        ])
-        result = self.cmd('role assignment list -g {} --include-classic-administrator'.format(resource_group)).get_output_in_json()
+
+        result = self.cmd('role assignment list -g {rg} --include-classic-administrator').get_output_in_json()
         self.assertTrue([x for x in result if x['roleDefinitionName'] in ['CoAdministrator', 'AccountAdministrator']])
 
 

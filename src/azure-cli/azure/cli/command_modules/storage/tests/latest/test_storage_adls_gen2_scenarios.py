@@ -4,6 +4,7 @@
 # --------------------------------------------------------------------------------------------
 import unittest
 import os
+import time
 from datetime import datetime, timedelta
 
 from azure.cli.testsdk import (ScenarioTest, LiveScenarioTest, ResourceGroupPreparer, StorageAccountPreparer, JMESPathCheck, JMESPathCheckExists,
@@ -224,7 +225,7 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
                            '--continue-on-failure false'.format(item['name'], filesystem, removal_acl, storage_account))
 
     @ResourceGroupPreparer()
-    @StorageAccountPreparer(kind="StorageV2", hns=True)
+    @StorageAccountPreparer(kind="StorageV2", allow_blob_public_access=True, hns=True)
     def test_adls_filesystem_scenarios(self, resource_group, storage_account):
         account_info = self.get_account_info(resource_group, storage_account)
         connection_str = self.cmd('storage account show-connection-string -n {} -g {} -otsv'
@@ -263,6 +264,65 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
         self.storage_cmd('storage fs delete -n {} -y', account_info, filesystem1)
         self.storage_cmd('storage fs delete -n {} -y', account_info, filesystem2)
         self.storage_cmd('storage fs delete -n {} -y', account_info, filesystem3)
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True, location="eastus2euap")
+    def test_adls_fs_soft_delete(self, resource_group, storage_account_info):
+        account_info = storage_account_info
+        container = self.create_file_system(account_info)
+        # Prepare
+        local_file = self.create_temp_file(1)
+        file_name = self.create_random_name(prefix='file', length=24)
+        dir_name = 'dir'
+
+        self.storage_cmd('storage fs file upload -f {} -s "{}" -p {} ', account_info,
+                         container, local_file, file_name)
+        self.assertEqual(len(self.storage_cmd('storage fs file list -f {}',
+                                              account_info, container).get_output_in_json()), 1)
+        self.storage_cmd('storage fs directory create -f {} -n {} ', account_info,
+                         container, dir_name)
+        self.assertEqual(len(self.storage_cmd('storage fs file list -f {}',
+                                              account_info, container).get_output_in_json()), 2)
+
+        # set delete-policy to enable soft-delete
+        self.storage_cmd('storage fs service-properties update --delete-retention --delete-retention-period 2',
+                         account_info)
+        self.storage_cmd('storage fs service-properties show',
+                         account_info).assert_with_checks(JMESPathCheck('delete_retention_policy.enabled', True),
+                                                          JMESPathCheck('delete_retention_policy.days', 2))
+        time.sleep(10)
+        # soft-delete and check
+        self.storage_cmd('storage fs file delete -f {} -p {} -y', account_info, container, file_name)
+        self.storage_cmd('storage fs directory delete -f {} -n {} -y', account_info, container, dir_name)
+        self.assertEqual(len(self.storage_cmd('storage fs file list -f {}',
+                                              account_info, container).get_output_in_json()), 0)
+
+        time.sleep(60)
+        result = self.storage_cmd('storage fs list-deleted-path -f {} --path-prefix {} ',
+                                  account_info, container, dir_name).get_output_in_json()
+        self.assertEqual(len(result), 1)
+
+        time.sleep(60)
+        result = self.storage_cmd('storage fs list-deleted-path -f {}', account_info, container) \
+            .get_output_in_json()
+        self.assertEqual(len(result), 2)
+
+        result = self.storage_cmd('storage fs list-deleted-path -f {} --num-results 1', account_info, container) \
+            .get_output_in_json()
+        self.assertEqual(len(result), 2)
+        marker = result[-1]['nextMarker']
+
+        result = self.storage_cmd('storage fs list-deleted-path -f {} --marker {}', account_info, container, marker) \
+            .get_output_in_json()
+        self.assertEqual(len(result), 1)
+
+        deleted_version = result[0]["deletionId"]
+
+        # undelete and check
+        self.storage_cmd('storage fs undelete-path -f {} --deleted-path-name {} --deletion-id  {}',
+                         account_info, container, file_name, deleted_version)
+        self.assertEqual(len(self.storage_cmd('storage fs file list -f {}',
+                                              account_info, container).get_output_in_json()), 1)
 
     @ResourceGroupPreparer()
     @StorageAccountPreparer(kind="StorageV2", hns=True)
@@ -376,7 +436,7 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
 
         # Upload File to an existing non-empty file with default overwrite=false
         new_local_file = self.create_temp_file(512)
-        with self.assertRaisesRegexp(CLIError, 'You cannot upload to an existing non-empty file with overwrite=false.'):
+        with self.assertRaisesRegex(CLIError, 'You cannot upload to an existing non-empty file with overwrite=false.'):
             self.storage_cmd('storage fs file upload -p {} -f {} -s "{}"', account_info, file_path, filesystem,
                              new_local_file)
 
@@ -419,7 +479,7 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
         import os
         self.assertEqual(1, sum(len(f) for r, d, f in os.walk(local_dir)))
 
-        with self.assertRaisesRegexp(CLIError, "The specified path already exists. Please change to a valid path."):
+        with self.assertRaisesRegex(CLIError, "The specified path already exists. Please change to a valid path."):
             self.storage_cmd('storage fs file download -p {} -f {} -d "{}" --overwrite false', account_info, file_path,
                              filesystem, local_dir)
 
@@ -436,6 +496,36 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
         self.storage_cmd('storage fs file delete -p {} -f {} -y', account_info, file, new_filesystem)
 
         self.storage_cmd('storage fs file exists -p {} -f {}', account_info, file, new_filesystem) \
+            .assert_with_checks(JMESPathCheck('exists', False))
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True)
+    def test_adls_file_set_expiry_scenarios(self, resource_group, storage_account):
+        from datetime import datetime, timedelta
+        account_info = self.get_account_info(resource_group, storage_account)
+        filesystem = self.create_file_system(account_info)
+        file = self.create_random_name(prefix="file", length=12)
+
+        self.storage_cmd('storage fs file create -p {} -f {} --content-type "application/json"',
+                         account_info, file, filesystem)
+        expiry = (datetime.utcnow() + timedelta(seconds=5)).strftime('%Y-%m-%dT%H:%M:%SZ')
+        self.storage_cmd("storage fs file set-expiry --expiry-options Absolute --expires-on {} -p {} -f {}",
+                         account_info, expiry, file, filesystem)
+        self.storage_cmd("storage fs file exists -p {} -f {}", account_info, file, filesystem)\
+            .assert_with_checks(JMESPathCheck('exists', True))
+        time.sleep(7)
+        self.storage_cmd("storage fs file exists -p {} -f {}", account_info, file, filesystem)\
+            .assert_with_checks(JMESPathCheck('exists', False))
+
+        self.storage_cmd('storage fs file create -p {} -f {} --content-type "application/json"',
+                         account_info, file, filesystem)
+        expiry = 5000
+        self.storage_cmd("storage fs file set-expiry --expiry-options RelativeToCreation --expires-on {} -p {} -f {}",
+                         account_info, expiry, file, filesystem)
+        self.storage_cmd("storage fs file exists -p {} -f {}", account_info, file, filesystem) \
+            .assert_with_checks(JMESPathCheck('exists', True))
+        time.sleep(7)
+        self.storage_cmd("storage fs file exists -p {} -f {}", account_info, file, filesystem) \
             .assert_with_checks(JMESPathCheck('exists', False))
 
     @ResourceGroupPreparer()
@@ -486,7 +576,7 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
 
         expiry = (datetime.utcnow() + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%MZ')
 
-        with self.assertRaisesRegexp(CLIError, "incorrect usage: specify --as-user when --auth-mode login"):
+        with self.assertRaisesRegex(CLIError, "incorrect usage: specify --as-user when --auth-mode login"):
             self.cmd('storage fs generate-sas --account-name {} -n {} --expiry {} --permissions r --https-only '
                      '--auth-mode login'.format(storage_account, f, expiry))
 
@@ -499,6 +589,52 @@ class StorageADLSGen2Tests(StorageScenarioMixin, ScenarioTest):
         self.assertIn('ske=', fs_sas)
         self.assertIn('sks=', fs_sas)
         self.assertIn('skv=', fs_sas)
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True)
+    def test_storage_fs_directory_generate_sas_full_uri(self, resource_group, storage_account):
+        account_info = self.get_account_info(resource_group, storage_account)
+        filesystem = self.create_file_system(account_info)
+        directory = 'testdir/subdir'
+
+        self.storage_cmd('storage fs directory create -n {} -f {}',
+                         account_info, directory, filesystem)
+
+        expiry = (datetime.utcnow() + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%MZ')
+        fs_uri = self.storage_cmd('storage fs directory generate-sas -n {} -f {} --expiry {} --permissions '
+                                  'r --https-only --full-uri', account_info, directory, filesystem, expiry).output
+        self.assertTrue(fs_uri)
+        self.assertIn('&sig=', fs_uri)
+        self.assertTrue(fs_uri.startswith('"https://{}.dfs.core.windows.net/{}/{}?s'.format(storage_account,
+                                                                                            filesystem, directory)))
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True)
+    def test_storage_fs_directory_generate_sas_as_user(self, resource_group, storage_account):
+        account_info = self.get_account_info(resource_group, storage_account)
+        filesystem = self.create_file_system(account_info)
+        directory = 'testdir/subdir'
+
+        self.storage_cmd('storage fs directory create -n {} -f {}', account_info, directory, filesystem)
+
+        expiry = (datetime.utcnow() + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%MZ')
+
+        with self.assertRaisesRegex(CLIError, "incorrect usage: specify --as-user when --auth-mode login"):
+            self.cmd('storage fs directory generate-sas --account-name {} -n {} -f {} --expiry {} --permissions r '
+                     '--https-only --auth-mode login'.format(storage_account, directory, filesystem, expiry))
+
+        fs_sas = self.cmd('storage fs directory generate-sas --account-name {} -n {} -f {} --expiry {} --permissions '
+                          'dlrwop --https-only --as-user --auth-mode login'.format(storage_account, directory,
+                                                                                   filesystem, expiry)).output
+        self.assertIn('&sig=', fs_sas)
+        self.assertIn('skoid=', fs_sas)
+        self.assertIn('sktid=', fs_sas)
+        self.assertIn('skt=', fs_sas)
+        self.assertIn('ske=', fs_sas)
+        self.assertIn('sks=', fs_sas)
+        self.assertIn('skv=', fs_sas)
+        self.assertIn('sr=d', fs_sas)
+        self.assertIn('sdd=2', fs_sas)
 
 
 class StorageADLSGen2LiveTests(StorageScenarioMixin, LiveScenarioTest):
@@ -605,4 +741,92 @@ class StorageADLSGen2LiveTests(StorageScenarioMixin, LiveScenarioTest):
         # Download from root directory
         self.cmd('storage fs directory download -f {} -d "{}" --recursive --account-name {} --sas-token {}'
                  .format(filesystem, local_folder, storage_account, sas))
+        self.assertEqual(6, sum(len(d) for r, d, f in os.walk(local_folder)))
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True, allow_shared_key_access=False)
+    @StorageTestFilesPreparer()
+    def test_adls_directory_upload_oauth(self, resource_group, storage_account, test_dir):
+        filesystem = 'testfilesystem'
+        directory = 'testdir'
+        self.oauth_cmd('storage fs create -n {} --account-name {}', filesystem, storage_account)
+        self.oauth_cmd('storage fs directory create -n {} -f {} --account-name {}', directory, filesystem,
+                       storage_account)
+
+        # Upload a single file to the fs directory
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --account-name {}', filesystem, directory,
+                       os.path.join(test_dir, 'readme'), storage_account)
+        self.oauth_cmd('storage fs file list -f {} --path {} --account-name {}', filesystem, directory,
+                       storage_account).assert_with_checks(JMESPathCheck('length(@)', 1))
+
+        # Upload a local directory to the fs directory
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --recursive --account-name {}'
+                       , filesystem, directory, os.path.join(test_dir, 'apple'), storage_account)
+        self.oauth_cmd('storage fs file list -f {} --path {} --account-name {}',
+                       filesystem, directory, storage_account).assert_with_checks(JMESPathCheck('length(@)', 12))
+
+        # Upload files in a local directory to the fs directory
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --recursive --account-name {}'
+                       .format(filesystem, directory, os.path.join(test_dir, 'butter/file_*'), storage_account))
+        self.oauth_cmd('storage fs file list -f {} --path {} --account-name {}'
+                       .format(filesystem, directory, storage_account), checks=[JMESPathCheck('length(@)', 22)])
+
+        # Upload files in a local directory to the fs subdirectory
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --recursive --account-name {}'
+                       .format(filesystem, '/'.join([directory, 'subdir']),
+                               os.path.join(test_dir, 'butter/file_*'), storage_account))
+        self.oauth_cmd('storage fs file list -f {} --path {} --account-name {}'
+                       .format(filesystem, '/'.join([directory, 'subdir']), storage_account),
+                       checks=[JMESPathCheck('length(@)', 10)])
+
+        # Upload single file to the fs root directory
+        self.oauth_cmd('storage fs directory upload -f {} -s "{}" --account-name {}', filesystem,
+                       os.path.join(test_dir, 'readme'), storage_account)
+        self.oauth_cmd('storage fs file exists -f {} --path {} --account-name {}', filesystem,
+                       'readme', storage_account).assert_with_checks(JMESPathCheck('exists', True))
+
+        # Upload files to the fs root directory
+        self.oauth_cmd('storage fs directory upload -f {} -s "{}" -r --account-name {}', filesystem,
+                       os.path.join(test_dir, 'duff'), storage_account)
+        self.oauth_cmd('storage fs file exists -f {} --path {} --account-name {}', filesystem, 'duff/edward',
+                       storage_account).assert_with_checks(JMESPathCheck('exists', True))
+
+        # Argument validation: Fail when destination path is file name
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s {} --account-name {}'.format(
+            filesystem, '/'.join([directory, 'readme']), test_dir, storage_account), expect_failure=True)
+
+    @ResourceGroupPreparer()
+    @StorageAccountPreparer(kind="StorageV2", hns=True, allow_shared_key_access=False)
+    @StorageTestFilesPreparer()
+    def test_adls_directory_download_oauth(self, resource_group, storage_account, test_dir):
+        filesystem = 'testfilesystem'
+        directory = 'testdir'
+        self.oauth_cmd('storage fs create -n {} --account-name {}', filesystem, storage_account)
+        self.oauth_cmd('storage fs directory create -n {} -f {} --account-name {}', directory, filesystem,
+                       storage_account)
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --recursive --account-name {}', filesystem,
+                       directory, os.path.join(test_dir, 'readme'), storage_account)
+        self.oauth_cmd('storage fs directory upload -f {} -d {} -s "{}" --recursive --account-name {}', filesystem,
+                       directory, os.path.join(test_dir, 'apple'), storage_account)
+
+        local_folder = self.create_temp_dir()
+        # Download a single file
+        self.oauth_cmd('storage fs directory download -f {} -s "{}" -d "{}" --recursive --account-name {}', filesystem,
+                       '/'.join([directory, 'readme']), local_folder, storage_account)
+        self.assertEqual(1, sum(len(f) for r, d, f in os.walk(local_folder)))
+
+        # Download entire directory
+        self.oauth_cmd('storage fs directory download -f {} -s {} -d "{}" --recursive --account-name {}',
+                       filesystem, directory, local_folder, storage_account)
+        self.assertEqual(2, sum(len(d) for r, d, f in os.walk(local_folder)))
+        self.assertEqual(12, sum(len(f) for r, d, f in os.walk(local_folder)))
+
+        # Download an entire subdirectory of a storage blob directory.
+        self.oauth_cmd('storage fs directory download -f {} -s {} -d "{}" --recursive --account-name {}'
+                       .format(filesystem, '/'.join([directory, 'apple']), local_folder, storage_account))
+        self.assertEqual(3, sum(len(d) for r, d, f in os.walk(local_folder)))
+
+        # Download from root directory
+        self.oauth_cmd('storage fs directory download -f {} -d "{}" --recursive --account-name {}'
+                       .format(filesystem, local_folder, storage_account))
         self.assertEqual(6, sum(len(d) for r, d, f in os.walk(local_folder)))

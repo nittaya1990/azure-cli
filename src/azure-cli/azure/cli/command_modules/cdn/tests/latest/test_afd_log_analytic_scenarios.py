@@ -9,28 +9,26 @@ import datetime
 
 
 class CdnAfdLogAnalyticScenarioTest(CdnAfdScenarioMixin, ScenarioTest):
-    @ResourceGroupPreparer()
+    @ResourceGroupPreparer(additional_tags={'owner': 'jingnanxu'})
     def test_afd_log_analytic(self, resource_group):
         profile_name = 'profile123'
         self.afd_profile_create_cmd(resource_group, profile_name)
 
         endpoint_name = self.create_random_name(prefix='endpoint', length=24)
-        origin_response_timeout_seconds = 100
         enabled_state = "Enabled"
-        checks = [JMESPathCheck('originResponseTimeoutSeconds', 100),
-                  JMESPathCheck('enabledState', 'Enabled')]
+        checks = [JMESPathCheck('enabledState', 'Enabled')]
         self.afd_endpoint_create_cmd(resource_group,
                                      profile_name,
                                      endpoint_name,
-                                     origin_response_timeout_seconds,
                                      enabled_state,
                                      checks=checks)
 
-        domain = f'{endpoint_name}.z01.azurefd.net'
+        endpoint = self.afd_endpoint_show_cmd(resource_group, profile_name, endpoint_name).get_output_in_json()
+        domain = endpoint["hostName"]  
 
         start_time = datetime.datetime.now().astimezone().replace(microsecond=0)
         if self.is_playback_mode():
-            start_time = datetime.datetime(2021, 4, 2, 10, 23, 7, tzinfo=datetime.timezone.utc)
+            start_time = datetime.datetime(2024, 3, 26, 9, 39, 47, tzinfo=datetime.timezone.utc)
 
         end_time = start_time + datetime.timedelta(seconds=300)
 
@@ -50,26 +48,23 @@ class CdnAfdLogAnalyticScenarioTest(CdnAfdScenarioMixin, ScenarioTest):
 
         self.afd_endpoint_delete_cmd(resource_group, endpoint_name, profile_name)
 
-    @ResourceGroupPreparer()
+    @ResourceGroupPreparer(additional_tags={'owner': 'jingnanxu'})
     def test_afd_waf_log_analytic(self, resource_group):
         profile_name = 'profile123'
         self.afd_profile_create_cmd(resource_group, profile_name, sku="Premium_AzureFrontDoor")
 
         endpoint_name = self.create_random_name(prefix='endpoint', length=24)
-        origin_response_timeout_seconds = 100
         enabled_state = "Enabled"
-        checks = [JMESPathCheck('originResponseTimeoutSeconds', 100),
-                  JMESPathCheck('enabledState', 'Enabled')]
+        checks = [JMESPathCheck('enabledState', 'Enabled')]
         self.afd_endpoint_create_cmd(resource_group,
                                      profile_name,
                                      endpoint_name,
-                                     origin_response_timeout_seconds,
                                      enabled_state,
                                      checks=checks)
 
         start_time = datetime.datetime.now().astimezone().replace(microsecond=0)
         if self.is_playback_mode():
-            start_time = datetime.datetime(2021, 4, 2, 10, 23, 6, tzinfo=datetime.timezone.utc)
+            start_time = datetime.datetime(2024, 3, 27, 4, 56, 43, tzinfo=datetime.timezone.utc)
 
         end_time = start_time + datetime.timedelta(seconds=300)
 

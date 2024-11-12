@@ -5,10 +5,12 @@
 
 # pylint: disable=too-many-locals
 
+import os
+import re
 from knack.util import CLIError
 from knack.log import get_logger
+from azure.cli.core.azclierror import InvalidArgumentValueError
 from azure.cli.core.util import user_confirmation
-
 from ._constants import get_managed_sku, get_premium_sku
 from ._utils import (
     get_registry_by_name,
@@ -23,6 +25,7 @@ from .network_rule import NETWORK_RULE_NOT_SUPPORTED
 logger = get_logger(__name__)
 DEF_DIAG_SETTINGS_NAME_TEMPLATE = '{}-diagnostic-settings'
 SYSTEM_ASSIGNED_IDENTITY_ALIAS = '[system]'
+DENY_ACTION = 'Deny'
 
 
 def acr_check_name(client, registry_name):
@@ -54,13 +57,17 @@ def acr_create(cmd,
                zone_redundancy=None,
                allow_trusted_services=None,
                allow_exports=None,
-               tags=None):
+               tags=None,
+               allow_metadata_search=None):
 
     if default_action and sku not in get_premium_sku(cmd):
         raise CLIError(NETWORK_RULE_NOT_SUPPORTED)
 
     if sku not in get_managed_sku(cmd):
         raise CLIError("Classic SKU is no longer supported. Please select a managed SKU.")
+
+    if re.match(r'\w*[A-Z]\w*', registry_name):
+        raise InvalidArgumentValueError("argument error: Registry name must use only lowercase.")
 
     Registry, Sku, NetworkRuleSet = cmd.get_models('Registry', 'Sku', 'NetworkRuleSet')
     registry = Registry(location=location, sku=Sku(name=sku), admin_user_enabled=admin_enabled,
@@ -74,13 +81,16 @@ def acr_create(cmd,
     if identity or key_encryption_key:
         _configure_cmk(cmd, registry, resource_group_name, identity, key_encryption_key)
 
+    if allow_metadata_search is not None:
+        _configure_metadata_search(cmd, registry, allow_metadata_search)
+
     _handle_network_bypass(cmd, registry, allow_trusted_services)
     _handle_export_policy(cmd, registry, allow_exports)
 
     lro_poller = client.begin_create(resource_group_name, registry_name, registry)
 
     if workspace:
-        from msrestazure.tools import is_valid_resource_id, resource_id
+        from azure.mgmt.core.tools import is_valid_resource_id, resource_id
         from azure.cli.core.commands import LongRunningOperation
         from azure.cli.core.commands.client_factory import get_subscription_id
         acr = LongRunningOperation(cmd.cli_ctx)(lro_poller)
@@ -117,7 +127,8 @@ def acr_update_custom(cmd,
                       allow_trusted_services=None,
                       anonymous_pull_enabled=None,
                       allow_exports=None,
-                      tags=None):
+                      tags=None,
+                      allow_metadata_search=None):
     if sku is not None:
         Sku = cmd.get_models('Sku')
         instance.sku = Sku(name=sku)
@@ -128,10 +139,6 @@ def acr_update_custom(cmd,
     if tags is not None:
         instance.tags = tags
 
-    if default_action is not None:
-        NetworkRuleSet = cmd.get_models('NetworkRuleSet')
-        instance.network_rule_set = NetworkRuleSet(default_action=default_action)
-
     if data_endpoint_enabled is not None:
         instance.data_endpoint_enabled = data_endpoint_enabled
 
@@ -140,6 +147,12 @@ def acr_update_custom(cmd,
 
     if anonymous_pull_enabled is not None:
         instance.anonymous_pull_enabled = anonymous_pull_enabled
+
+    if default_action is not None:
+        _configure_default_action(cmd, instance, default_action)
+
+    if allow_metadata_search is not None:
+        _configure_metadata_search(cmd, instance, allow_metadata_search)
 
     _handle_network_bypass(cmd, instance, allow_trusted_services)
     _handle_export_policy(cmd, instance, allow_exports)
@@ -150,6 +163,17 @@ def acr_update_custom(cmd,
 def _configure_public_network_access(cmd, registry, enabled):
     PublicNetworkAccess = cmd.get_models('PublicNetworkAccess')
     registry.public_network_access = (PublicNetworkAccess.enabled if enabled else PublicNetworkAccess.disabled)
+    if enabled:
+        registry.public_network_access = PublicNetworkAccess.enabled
+    else:
+        registry.public_network_access = PublicNetworkAccess.disabled
+        _configure_default_action(cmd, registry, DENY_ACTION)
+        logger.warning('Disabling the public endpoint overrides all firewall configurations.')
+
+
+def _configure_default_action(cmd, registry, action):
+    NetworkRuleSet = cmd.get_models('NetworkRuleSet')
+    registry.network_rule_set = NetworkRuleSet(default_action=action)
 
 
 def _handle_network_bypass(cmd, registry, allow_trusted_services):
@@ -232,7 +256,7 @@ def acr_show_endpoints(cmd,
 
 def acr_login(cmd,
               registry_name,
-              resource_group_name=None,  # pylint: disable=unused-argument
+              resource_group_name=None,
               tenant_suffix=None,
               username=None,
               password=None,
@@ -246,7 +270,8 @@ def acr_login(cmd,
             registry_name=registry_name,
             tenant_suffix=tenant_suffix,
             username=username,
-            password=password)
+            password=password,
+            resource_group_name=resource_group_name)
 
         logger.warning("You can perform manual login using the provided access token below, "
                        "for example: 'docker login loginServer -u %s -p accessToken'", EMPTY_GUID)
@@ -277,7 +302,8 @@ def acr_login(cmd,
         registry_name=registry_name,
         tenant_suffix=tenant_suffix,
         username=username,
-        password=password)
+        password=password,
+        resource_group_name=resource_group_name)
 
     # warn casing difference caused by ACR normalizing to lower on login_server
     parts = login_server.split('.')
@@ -286,7 +312,7 @@ def acr_login(cmd,
                        'docker commands, to avoid authentication errors, use all lowercase.')
 
     from subprocess import PIPE, Popen
-    logger.debug("Invoking '%s --username %s --password <redacted> %s'",
+    logger.debug("Invoking '%s login --username %s --password <redacted> %s'",
                  docker_command, username, login_server)
     p = Popen([docker_command, "login",
                "--username", username,
@@ -332,7 +358,10 @@ def acr_show_usage(cmd, client, registry_name, resource_group_name=None):
 
 def get_docker_command(is_diagnostics_context=False):
     from ._errors import DOCKER_COMMAND_ERROR, DOCKER_DAEMON_ERROR
-    docker_command = 'docker'
+    if os.getenv('DOCKER_COMMAND'):
+        docker_command = os.getenv('DOCKER_COMMAND')
+    else:
+        docker_command = 'docker'
 
     from subprocess import PIPE, Popen, CalledProcessError
     try:
@@ -400,7 +429,6 @@ def _check_wincred(login_server):
             # Don't update config file or retry as this doesn't seem to be a wincred issue
             return False
 
-        import os
         content = {
             "auths": {
                 login_server: {}
@@ -581,7 +609,7 @@ def _analyze_identities(identities):
 
 
 def _ensure_identity_resource_id(subscription_id, resource_group, resource):
-    from msrestazure.tools import resource_id, is_valid_resource_id
+    from azure.mgmt.core.tools import resource_id, is_valid_resource_id
     if is_valid_resource_id(resource):
         return resource
     return resource_id(subscription=subscription_id,
@@ -594,3 +622,8 @@ def _ensure_identity_resource_id(subscription_id, resource_group, resource):
 def list_private_link_resources(cmd, client, registry_name, resource_group_name=None):
     resource_group_name = get_resource_group_name_by_registry_name(cmd.cli_ctx, registry_name, resource_group_name)
     return client.list_private_link_resources(resource_group_name, registry_name)
+
+
+def _configure_metadata_search(cmd, registry, enabled):
+    MetadataSearch = cmd.get_models('MetadataSearch')
+    registry.metadata_search = (MetadataSearch.enabled if enabled else MetadataSearch.disabled)

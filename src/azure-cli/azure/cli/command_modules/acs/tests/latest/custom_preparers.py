@@ -5,6 +5,7 @@
 
 from datetime import datetime
 import os
+import unittest
 
 from azure.cli.testsdk.preparers import (
     ResourceGroupPreparer,
@@ -18,6 +19,10 @@ from azure.cli.command_modules.acs.tests.latest.recording_processors import MOCK
 
 
 class AKSCustomResourceGroupPreparer(ResourceGroupPreparer):
+    """
+    Override to support overriding the default location in test cases using this custom preparer with specific
+    environment variables, and a flag (preserve_default_location) to avoid being overridden by environment variables.
+    """
     def __init__(
         self,
         name_prefix="clitest.rg",
@@ -50,6 +55,11 @@ class AKSCustomResourceGroupPreparer(ResourceGroupPreparer):
 
 
 class AKSCustomVirtualNetworkPreparer(VirtualNetworkPreparer):
+    """
+    Override to specify custom address_prefixes to avoid conflict with aks cluster/service cidr.
+
+    TODO: remove this.
+    """
     def __init__(
         self,
         name_prefix="clitest.vn",
@@ -143,6 +153,10 @@ class AKSCustomVirtualNetworkPreparer(VirtualNetworkPreparer):
 class AKSCustomRoleBasedServicePrincipalPreparer(
     RoleBasedServicePrincipalPreparer
 ):
+    """
+    Override to keep the recording consistent with the count in the mock request in scenarios such as the
+    check-in pipeline where the SP is pre-configured for testing and imported via environment variables.
+    """
     def __init__(
         self,
         name_prefix="clitest",
@@ -163,25 +177,14 @@ class AKSCustomRoleBasedServicePrincipalPreparer(
             key,
         )
 
+    def __call__(self, fn):
+        if not self.dev_setting_sp_password:
+            return unittest.skip("skip test case that requires service principal as password is not provided")(fn)
+        return super(AKSCustomRoleBasedServicePrincipalPreparer, self).__call__(fn)
+
     def create_resource(self, name, **kwargs):
-        if not self.dev_setting_sp_name:
-            command = "az ad sp create-for-rbac -n {}{}".format(
-                name, " --skip-assignment" if self.skip_assignment else ""
-            )
-
-            try:
-                self.result = self.live_only_execute(
-                    self.cli_ctx, command
-                ).get_output_in_json()
-            except AttributeError:  # live only execute returns None if playing from record
-                pass
-
-            if self.live_test or self.test_class_instance.in_recording:
-                sp_name = name
-                sp_password = self.result.get("password") or GraphClientPasswordReplacer.PWD_REPLACEMENT
-            else:
-                sp_name = MOCK_GUID
-                sp_password = MOCK_SECRET
+        if not self.dev_setting_sp_password:
+            return
         else:
             # call AbstractPreparer.moniker to make resource counts and self.resource_moniker consistent between live
             # and play-back. see SingleValueReplacer.process_request, AbstractPreparer.__call__._preparer_wrapper

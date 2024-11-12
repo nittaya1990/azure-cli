@@ -3,10 +3,11 @@
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
 
-from msrestazure.azure_exceptions import CloudError
 from knack.log import get_logger
 from knack.util import CLIError
+from azure.core.exceptions import HttpResponseError
 from azure.cli.core.azclierror import ValidationError
+from azure.cli.core.commands.validators import validate_tags
 from azure.cli.command_modules.servicefabric._sf_utils import _get_resource_group_by_name
 from azure.mgmt.servicefabricmanagedclusters.models import (PartitionScheme, ServiceKind)
 from ._client_factory import servicefabric_client_factory, servicefabric_managed_client_factory
@@ -99,6 +100,7 @@ def validate_create_application(cmd, namespace):
 
 # Managed Clusters
 def validate_create_managed_cluster(cmd, namespace):
+    validate_tags(namespace)
     rg = _get_resource_group_by_name(cmd.cli_ctx, namespace.resource_group_name)
     if rg is None and namespace.location is None:
         raise CLIError("Resource group {} doesn't exists and location is not provided. "
@@ -118,7 +120,17 @@ def validate_create_managed_cluster(cmd, namespace):
             raise CLIError("--upgrade-cadence should only be used whe --upgrade-mode is set to 'Automatic'.")
 
 
+def validate_network_security_rule(cmd, namespace):
+    client = servicefabric_managed_client_factory(cmd.cli_ctx)
+    cluster = _safe_get_resource(client.managed_clusters.get,
+                                 (namespace.resource_group_name, namespace.cluster_name))
+
+    if cluster is None or cluster.cluster_state != 'Ready':
+        raise ValidationError("cluster state is invalid for this operation")
+
+
 def validate_create_managed_service(namespace):
+    validate_tags(namespace)
     if namespace.service_type is None:
         raise CLIError("--service-type is required")
 
@@ -162,6 +174,7 @@ def validate_create_managed_service(namespace):
 
 
 def validate_update_managed_service(cmd, namespace):
+    validate_tags(namespace)
     client = servicefabric_managed_client_factory(cmd.cli_ctx)
     service = _safe_get_resource(client.services.get,
                                  (namespace.resource_group_name, namespace.cluster_name,
@@ -264,6 +277,7 @@ def validate_update_managed_service_correlation(cmd, namespace):
 
 
 def validate_update_managed_application(cmd, namespace):
+    validate_tags(namespace)
     client = servicefabric_managed_client_factory(cmd.cli_ctx)
     app = _safe_get_resource(client.applications.get,
                              (namespace.resource_group_name, namespace.cluster_name, namespace.application_name))
@@ -299,6 +313,7 @@ def validate_update_managed_application(cmd, namespace):
 
 
 def validate_create_managed_application(cmd, namespace):
+    validate_tags(namespace)
     client = servicefabric_managed_client_factory(cmd.cli_ctx)
     if namespace.package_url is None:
         type_version = _safe_get_resource(client.application_type_versions.get,
@@ -317,8 +332,8 @@ def validate_create_managed_application(cmd, namespace):
 def _safe_get_resource(getResourceAction, params):
     try:
         return getResourceAction(*params)
-    except CloudError as ex:
-        if ex.error.error == 'ResourceNotFound':
+    except HttpResponseError as ex:
+        if ex.status_code == '404':
             return None
         logger.warning("Unable to get resource, exception: %s", ex)
         raise

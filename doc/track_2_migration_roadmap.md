@@ -3,7 +3,7 @@ This document provides the roadmap for Track 2 SDK migration in Azure CLI. When 
 
 ## Why do we need migrate Track 1 SDK to Track 2 SDK in Azure CLI?
 - Track 1 SDK will be eventually deprecated sometime in the future. 
-- Some new features will only be in track2 SDK in the future.
+- Some new features will only be in Track 2 SDK in the future.
 
 ## Here are criteria to determine the priority of migration:
 - On-demand for Track 2 SDK from CLI customers (such as CAE support from LinkedIn) has higher priority.
@@ -11,9 +11,9 @@ This document provides the roadmap for Track 2 SDK migration in Azure CLI. When 
 - The smaller the gap between Track 1 SDK version and Track 2 SDK version, the higher priority.
 - The more frequent release, the higher priority.
 - If Track 1 SDK is in preview (0.x.x or x.x.xrc), the lower priority.
-- Extenison has lower priority.
+- Extension has lower priority.
 
-## Here is the proposed roadmap for managment plane migration. (Total 60 CLI modules and 78 extensions)
+## Here is the proposed roadmap for management plane migration. (Total 60 CLI modules and 78 extensions)
 
 - To meet CAE requirements (`CAE support` column is `Yes` in the table below), 
   - 12 services need to be migrated by the end of 0/30/2021.
@@ -83,9 +83,9 @@ This document provides the roadmap for Track 2 SDK migration in Azure CLI. When 
 | DLS (CLI own)|  | **Completed (too old)** | N/A (Will incorporate into storage SDK) |N/A | DataLakeStore: Preview (0.5.0) | | Module |
 | ManagedServices | |**Completed (too old)**| N/A| Preview (6.0.0b1) | GA (1.0.0) | Low (Once two years) | Module |
 | BotService   |  |**Block by service team** | N/A|Preview (1.0.0b1) | Preview (0.2.0) | Low (Once two years) | Module |
-| APIM   | |**Block by service team** | N/A |APIManagement: GA (1.0.0) | APIManagement: Preview (0.2.0) | Low (Once a year) | Module |
-| ServiceFabric |  |**On demand (no new feature)** | N/A|Preview (1.0.0) | Preview (0.5.0) | Low (Once a year) | Module |
-| EventHub   |  |**On demand (no new feature)** | N/A |GA (8.0.0) | GA (4.2.0) | Low (Once a year) | Module |
+| APIM   | |**Completed**  | N/A |APIManagement: GA (1.0.0) | APIManagement: Preview (0.2.0) | Low (Once a year) | Module |
+| ServiceFabric |  |***Completed** | N/A|Preview (1.0.0) | Preview (0.5.0) | Low (Once a year) | Module |
+| EventHub   |  |**Completed**  | N/A |GA (8.0.0) | GA (4.2.0) | Low (Once a year) | Module |
 | Relay |  |**On demand (no new feature)** | N/A|GA (1.0.0) | Preview (0.2.0) | Low (Once two years) | Module |
 | Role (CLI own)  | |**On demand (no new feature)** | N/A | Authorization: GA (1.0.0)<br>MSI: N/A | Authorization: Preview (0.61.0)<br>MSI: GA (1.0.0) | Low (Once a year) | Module |
 | Lab  | |**On demand (no new feature)** | N/A |DevTestLabs: GA (9.0.0) | DevTestLabs: GA (4.0.0) | Low (Once half year) | Module |

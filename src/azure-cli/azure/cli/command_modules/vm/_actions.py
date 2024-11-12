@@ -32,9 +32,9 @@ logger = get_logger(__name__)
 
 def _resource_not_exists(cli_ctx, resource_type):
     def _handle_resource_not_exists(namespace):
-        # TODO: hook up namespace._subscription_id once we support it
         ns, t = resource_type.split('/')
-        if resource_exists(cli_ctx, namespace.resource_group_name, namespace.name, ns, t):
+        # pylint: disable=protected-access
+        if resource_exists(cli_ctx, namespace._subscription_id, namespace.resource_group_name, namespace.name, ns, t):
             raise CLIError('Resource {} of type {} in group {} already exists.'.format(
                 namespace.name,
                 resource_type,
@@ -46,7 +46,7 @@ def _get_thread_count():
     return 5  # don't increase too much till https://github.com/Azure/msrestazure-for-python/issues/6 is fixed
 
 
-def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zone):
+def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zone, architecture):
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     all_images = []
@@ -58,9 +58,9 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
         from azure.core.exceptions import ResourceNotFoundError
         try:
             if edge_zone is not None:
-                offers = edge_zone_client.list_offers(location, edge_zone, publisher)
+                offers = edge_zone_client.list_offers(location=location, edge_zone=edge_zone, publisher_name=publisher)
             else:
-                offers = client.virtual_machine_images.list_offers(location, publisher)
+                offers = client.virtual_machine_images.list_offers(location=location, publisher_name=publisher)
         except ResourceNotFoundError as e:
             logger.warning(str(e))
             return
@@ -69,9 +69,11 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
         for o in offers:
             try:
                 if edge_zone is not None:
-                    skus = edge_zone_client.list_skus(location, edge_zone, publisher, o.name)
+                    skus = edge_zone_client.list_skus(location=location, edge_zone=edge_zone,
+                                                      publisher_name=publisher, offer=o.name)
                 else:
-                    skus = client.virtual_machine_images.list_skus(location, publisher, o.name)
+                    skus = client.virtual_machine_images.list_skus(location=location, publisher_name=publisher,
+                                                                   offer=o.name)
             except ResourceNotFoundError as e:
                 logger.warning(str(e))
                 continue
@@ -79,10 +81,13 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
                 skus = [s for s in skus if _matched(sku, s.name)]
             for s in skus:
                 try:
+                    expand = "properties/imageDeprecationStatus"
                     if edge_zone is not None:
-                        images = edge_zone_client.list(location, edge_zone, publisher, o.name, s.name)
+                        images = edge_zone_client.list(location=location, edge_zone=edge_zone, publisher_name=publisher,
+                                                       offer=o.name, skus=s.name, expand=expand)
                     else:
-                        images = client.virtual_machine_images.list(location, publisher, o.name, s.name)
+                        images = client.virtual_machine_images.list(location=location, publisher_name=publisher,
+                                                                    offer=o.name, skus=s.name, expand=expand)
                 except ResourceNotFoundError as e:
                     logger.warning(str(e))
                     continue
@@ -91,10 +96,15 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
                         'publisher': publisher,
                         'offer': o.name,
                         'sku': s.name,
-                        'version': i.name
+                        'version': i.name,
+                        'architecture': i.additional_properties.get("properties", {}).get("architecture", None) or "",
+                        'imageDeprecationStatus': i.additional_properties.get(
+                            "properties", {}).get("imageDeprecationStatus", {}) or ""
                     }
                     if edge_zone is not None:
                         image_info['edge_zone'] = edge_zone
+                    if architecture and architecture != image_info['architecture']:
+                        continue
                     all_images.append(image_info)
 
     if edge_zone is not None:
@@ -102,9 +112,9 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
         from azure.cli.core.profiles import ResourceType
         edge_zone_client = get_mgmt_service_client(cli_ctx,
                                                    ResourceType.MGMT_COMPUTE).virtual_machine_images_edge_zone
-        publishers = edge_zone_client.list_publishers(location, edge_zone)
+        publishers = edge_zone_client.list_publishers(location=location, edge_zone=edge_zone)
     else:
-        publishers = client.virtual_machine_images.list_publishers(location)
+        publishers = client.virtual_machine_images.list_publishers(location=location)
     if publisher:
         publishers = [p for p in publishers if _matched(publisher, p.name)]
 
@@ -120,7 +130,7 @@ def load_images_thru_services(cli_ctx, publisher, offer, sku, location, edge_zon
     return all_images
 
 
-def load_images_from_aliases_doc(cli_ctx, publisher=None, offer=None, sku=None):
+def load_images_from_aliases_doc(cli_ctx, publisher=None, offer=None, sku=None, architecture=None):
     import requests
     from azure.cli.core.cloud import CloudEndpointNotSetException
     from azure.cli.core.util import should_disable_connection_verify
@@ -155,12 +165,14 @@ def load_images_from_aliases_doc(cli_ctx, publisher=None, offer=None, sku=None):
                     'publisher': vv['publisher'],
                     'offer': vv['offer'],
                     'sku': vv['sku'],
-                    'version': vv['version']
+                    'version': vv['version'],
+                    'architecture': vv['architecture']
                 })
 
         all_images = [i for i in all_images if (_matched(publisher, i['publisher']) and
                                                 _matched(offer, i['offer']) and
-                                                _matched(sku, i['sku']))]
+                                                _matched(sku, i['sku']) and
+                                                _matched(architecture, i['architecture']))]
         return all_images
     except KeyError:
         raise CLIError('Could not retrieve image list from {} or local copy'.format(target_url))
@@ -212,7 +224,7 @@ def load_extension_images_thru_services(cli_ctx, publisher, name, version, locat
                         'name': t.name,
                         'version': v.name})
 
-    publishers = client.virtual_machine_images.list_publishers(location)
+    publishers = client.virtual_machine_images.list_publishers(location=location)
     if publisher:
         publishers = [p for p in publishers if _matched(publisher, p.name, partial_match)]
 

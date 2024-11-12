@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"kind": "Face", "sku": {"name": "S0"}, "location": "centraluseuap", "properties":
+    body: '{"kind": "Face", "sku": {"name": "S0"}, "location": "SOUTHCENTRALUS", "properties":
       {}}'
     headers:
       Accept:
@@ -12,31 +12,32 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '86'
+      - '87'
       Content-Type:
       - application/json
       ParameterSetName:
       - -n -g --kind --sku -l --yes
       User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2021-04-30
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2023-05-01
   response:
     body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"010011b2-0000-3300-0000-60caeed40000\"","systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2021-06-17T06:42:28.3970351Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-06-17T06:42:28.3970351Z"},"location":"centraluseuap","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://centraluseuap.api.cognitive.microsoft.com/","dateCreated":"2021-06-17T06:42:28.5815991Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"*","method":"*"}]}]},"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"}],"endpoints":{"face":"https://centraluseuap.api.cognitive.microsoft.com/"},"provisioningState":"Creating"}}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"7d0068fd-0000-0500-0000-64bf54bc0000\"","location":"SOUTHCENTRALUS","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://southcentralus.api.cognitive.microsoft.com/","internalId":"3c7556565d934153a720e0b2c4d2b14a","dateCreated":"2023-07-25T04:51:08.2952585Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"*","method":"*"}]}]},"isMigrated":false,"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"},{"name":"Scenario","value":"Face.LegacyPreview,Face.Legacy"}],"endpoints":{"Face":"https://southcentralus.api.cognitive.microsoft.com/"},"provisioningState":"Creating"},"systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2023-07-25T04:51:08.0548187Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-07-25T04:51:08.0548187Z"}}'
     headers:
       azure-asyncoperation:
-      - https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/centraluseuap/operationResults/e3e59698-3f8d-4b94-b3ab-9ae031c4062d?api-version=2017-04-18
+      - https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/SOUTHCENTRALUS/operationResults/02a96a2f-eebe-4934-970a-18964a535e6e?api-version=2017-04-18
       cache-control:
       - no-cache
       content-length:
-      - '1441'
+      - '1418'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Thu, 17 Jun 2021 06:42:29 GMT
+      - Tue, 25 Jul 2023 04:51:08 GMT
       etag:
-      - '"010011b2-0000-3300-0000-60caeed40000"'
+      - '"7d0068fd-0000-0500-0000-64bf54bc0000"'
       expires:
       - '-1'
       pragma:
@@ -48,9 +49,9 @@ interactions:
       x-content-type-options:
       - nosniff
       x-envoy-upstream-service-time:
-      - '381'
+      - '298'
       x-ms-ratelimit-remaining-subscription-writes:
-      - '1198'
+      - '1197'
     status:
       code: 201
       message: Created
@@ -68,21 +69,71 @@ interactions:
       ParameterSetName:
       - -n -g --kind --sku -l --yes
       User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/centraluseuap/operationResults/e3e59698-3f8d-4b94-b3ab-9ae031c4062d?api-version=2017-04-18
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/SOUTHCENTRALUS/operationResults/02a96a2f-eebe-4934-970a-18964a535e6e?api-version=2017-04-18
   response:
     body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/centraluseuap/operationResults/e3e59698-3f8d-4b94-b3ab-9ae031c4062d","name":"e3e59698-3f8d-4b94-b3ab-9ae031c4062d","status":"Succeeded","startTime":"2021-06-17T06:42:28Z","endTime":"2021-06-17T06:42:29Z"}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/SOUTHCENTRALUS/operationResults/02a96a2f-eebe-4934-970a-18964a535e6e","name":"02a96a2f-eebe-4934-970a-18964a535e6e","status":"Creating","startTime":"2023-07-25T04:51:08Z"}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '311'
+      - '278'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Thu, 17 Jun 2021 06:42:58 GMT
+      - Tue, 25 Jul 2023 04:51:08 GMT
+      expires:
+      - '-1'
+      pragma:
+      - no-cache
+      server:
+      - istio-envoy
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-envoy-upstream-service-time:
+      - '7'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - cognitiveservices account create
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - -n -g --kind --sku -l --yes
+      User-Agent:
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
+    method: GET
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/SOUTHCENTRALUS/operationResults/02a96a2f-eebe-4934-970a-18964a535e6e?api-version=2017-04-18
+  response:
+    body:
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.CognitiveServices/locations/SOUTHCENTRALUS/operationResults/02a96a2f-eebe-4934-970a-18964a535e6e","name":"02a96a2f-eebe-4934-970a-18964a535e6e","status":"Succeeded","startTime":"2023-07-25T04:51:08Z","endTime":"2023-07-25T04:51:09Z"}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '312'
+      content-type:
+      - application/json; charset=utf-8
+      date:
+      - Tue, 25 Jul 2023 04:51:38 GMT
       expires:
       - '-1'
       pragma:
@@ -116,23 +167,75 @@ interactions:
       ParameterSetName:
       - -n -g --kind --sku -l --yes
       User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2021-04-30
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2023-05-01
   response:
     body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"010012b2-0000-3300-0000-60caeed50000\"","systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2021-06-17T06:42:28.3970351Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-06-17T06:42:28.3970351Z"},"location":"centraluseuap","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://centraluseuap.api.cognitive.microsoft.com/","dateCreated":"2021-06-17T06:42:28.5815991Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"*","method":"*"}]}]},"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"}],"endpoints":{"face":"https://centraluseuap.api.cognitive.microsoft.com/"},"provisioningState":"Succeeded"}}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"7d0069fd-0000-0500-0000-64bf54bd0000\"","location":"SOUTHCENTRALUS","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://southcentralus.api.cognitive.microsoft.com/","internalId":"3c7556565d934153a720e0b2c4d2b14a","dateCreated":"2023-07-25T04:51:08.2952585Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"*","method":"*"}]}]},"isMigrated":false,"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"},{"name":"Scenario","value":"Face.LegacyPreview,Face.Legacy"}],"endpoints":{"Face":"https://southcentralus.api.cognitive.microsoft.com/"},"provisioningState":"Succeeded"},"systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2023-07-25T04:51:08.0548187Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-07-25T04:51:08.0548187Z"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '1442'
+      - '1419'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Thu, 17 Jun 2021 06:42:58 GMT
+      - Tue, 25 Jul 2023 04:51:38 GMT
       etag:
-      - '"010012b2-0000-3300-0000-60caeed50000"'
+      - '"7d0069fd-0000-0500-0000-64bf54bd0000"'
+      expires:
+      - '-1'
+      pragma:
+      - no-cache
+      server:
+      - istio-envoy
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+      transfer-encoding:
+      - chunked
+      vary:
+      - Accept-Encoding
+      x-content-type-options:
+      - nosniff
+      x-envoy-upstream-service-time:
+      - '11'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      CommandName:
+      - cognitiveservices account show
+      Connection:
+      - keep-alive
+      ParameterSetName:
+      - -n -g
+      User-Agent:
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
+    method: GET
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2023-05-01
+  response:
+    body:
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"7d0069fd-0000-0500-0000-64bf54bd0000\"","location":"SOUTHCENTRALUS","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://southcentralus.api.cognitive.microsoft.com/","internalId":"3c7556565d934153a720e0b2c4d2b14a","dateCreated":"2023-07-25T04:51:08.2952585Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":10,"matchPatterns":[{"path":"*","method":"*"}]}]},"isMigrated":false,"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"},{"name":"Scenario","value":"Face.LegacyPreview,Face.Legacy"}],"endpoints":{"Face":"https://southcentralus.api.cognitive.microsoft.com/"},"provisioningState":"Succeeded"},"systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2023-07-25T04:51:08.0548187Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-07-25T04:51:08.0548187Z"}}'
+    headers:
+      cache-control:
+      - no-cache
+      content-length:
+      - '1419'
+      content-type:
+      - application/json; charset=utf-8
+      date:
+      - Tue, 25 Jul 2023 04:51:39 GMT
+      etag:
+      - '"7d0069fd-0000-0500-0000-64bf54bd0000"'
       expires:
       - '-1'
       pragma:
@@ -160,106 +263,6 @@ interactions:
       Accept-Encoding:
       - gzip, deflate
       CommandName:
-      - cognitiveservices account show
-      Connection:
-      - keep-alive
-      ParameterSetName:
-      - -n -g
-      User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
-    method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2021-04-30
-  response:
-    body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"010012b2-0000-3300-0000-60caeed50000\"","systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2021-06-17T06:42:28.3970351Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-06-17T06:42:28.3970351Z"},"location":"centraluseuap","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://centraluseuap.api.cognitive.microsoft.com/","dateCreated":"2021-06-17T06:42:28.5815991Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"*","method":"*"}]}]},"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"}],"endpoints":{"face":"https://centraluseuap.api.cognitive.microsoft.com/"},"provisioningState":"Succeeded"}}'
-    headers:
-      cache-control:
-      - no-cache
-      content-length:
-      - '1442'
-      content-type:
-      - application/json; charset=utf-8
-      date:
-      - Thu, 17 Jun 2021 06:43:00 GMT
-      etag:
-      - '"010012b2-0000-3300-0000-60caeed50000"'
-      expires:
-      - '-1'
-      pragma:
-      - no-cache
-      server:
-      - istio-envoy
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
-      x-content-type-options:
-      - nosniff
-      x-envoy-upstream-service-time:
-      - '22'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - application/json
-      Accept-Encoding:
-      - gzip, deflate
-      CommandName:
-      - cognitiveservices account show
-      Connection:
-      - keep-alive
-      ParameterSetName:
-      - -n -g
-      User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
-    method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2021-04-30
-  response:
-    body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002","name":"cs_cli_test_000002","type":"Microsoft.CognitiveServices/accounts","etag":"\"010012b2-0000-3300-0000-60caeed50000\"","systemData":{"createdBy":"yuanyang@microsoft.com","createdByType":"User","createdAt":"2021-06-17T06:42:28.3970351Z","lastModifiedBy":"yuanyang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-06-17T06:42:28.3970351Z"},"location":"centraluseuap","sku":{"name":"S0"},"kind":"Face","properties":{"endpoint":"https://centraluseuap.api.cognitive.microsoft.com/","dateCreated":"2021-06-17T06:42:28.5815991Z","callRateLimit":{"rules":[{"key":"face","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"face/*","method":"*"}]},{"key":"container.billing","renewalPeriod":10,"count":500,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"billing/*","method":"*"}]},{"key":"default","renewalPeriod":1,"count":15,"dynamicThrottlingEnabled":false,"matchPatterns":[{"path":"*","method":"*"}]}]},"privateEndpointConnections":[],"publicNetworkAccess":"Enabled","capabilities":[{"name":"VirtualNetworks"},{"name":"Container","value":"Face.*,Face.Face"}],"endpoints":{"face":"https://centraluseuap.api.cognitive.microsoft.com/"},"provisioningState":"Succeeded"}}'
-    headers:
-      cache-control:
-      - no-cache
-      content-length:
-      - '1442'
-      content-type:
-      - application/json; charset=utf-8
-      date:
-      - Thu, 17 Jun 2021 06:43:15 GMT
-      etag:
-      - '"010012b2-0000-3300-0000-60caeed50000"'
-      expires:
-      - '-1'
-      pragma:
-      - no-cache
-      server:
-      - istio-envoy
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains
-      transfer-encoding:
-      - chunked
-      vary:
-      - Accept-Encoding
-      x-content-type-options:
-      - nosniff
-      x-envoy-upstream-service-time:
-      - '8'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - application/json
-      Accept-Encoding:
-      - gzip, deflate
-      CommandName:
       - cognitiveservices account delete
       Connection:
       - keep-alive
@@ -268,9 +271,10 @@ interactions:
       ParameterSetName:
       - -n -g
       User-Agent:
-      - AZURECLI/2.25.0 azsdk-python-mgmt-cognitiveservices/12.0.0 Python/3.7.8 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.50.0 azsdk-python-mgmt-cognitiveservices/13.5.0 Python/3.10.11
+        (Windows-10-10.0.22621-SP0)
     method: DELETE
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2021-04-30
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/clitest.rg000001/providers/Microsoft.CognitiveServices/accounts/cs_cli_test_000002?api-version=2023-05-01
   response:
     body:
       string: ''
@@ -280,7 +284,7 @@ interactions:
       content-length:
       - '0'
       date:
-      - Thu, 17 Jun 2021 06:43:17 GMT
+      - Tue, 25 Jul 2023 04:51:42 GMT
       expires:
       - '-1'
       pragma:
@@ -292,7 +296,7 @@ interactions:
       x-content-type-options:
       - nosniff
       x-envoy-upstream-service-time:
-      - '89'
+      - '79'
       x-ms-ratelimit-remaining-subscription-deletes:
       - '14999'
     status:

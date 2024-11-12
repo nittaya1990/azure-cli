@@ -2,13 +2,15 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License. See License.txt in the project root for license information.
 # --------------------------------------------------------------------------------------------
+import time
 from azure.cli.testsdk import ScenarioTest, ResourceGroupPreparer
 from azure.cli.testsdk.decorators import serial_test
+from azure.core.exceptions import HttpResponseError
 
 POOL_DEFAULT = "--service-level 'Premium' --size 4"
 VOLUME_DEFAULT = "--service-level 'Premium' --usage-threshold 100"
-LOCATION = "southcentralusstage"
-VNET_LOCATION = "southcentralus"
+LOCATION = "eastus"
+VNET_LOCATION = "eastus"
 
 # No tidy up of tests required. The resource group is automatically removed
 
@@ -34,7 +36,8 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
             self.cmd("netappfiles account create -g {rg} -a '%s' -l %s" % (account_name, LOCATION))
             self.cmd("netappfiles pool create -g {rg} -a %s -p %s -l %s %s %s" %
                      (account_name, pool_name, LOCATION, POOL_DEFAULT, tag))
-
+        if self.is_live or self.in_recording:
+            time.sleep(60)
         if snapshot_id:
             return self.cmd("netappfiles volume create -g {rg} -a %s -p %s -v %s -l %s %s --file-path %s --vnet %s "
                             "--subnet %s %s --snapshot-id %s" %
@@ -45,7 +48,6 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
                             "--subnet %s %s" % (account_name, pool_name, volume_name1, LOCATION, VOLUME_DEFAULT,
                                                 file_path, vnet_name, subnet_name, tag)).get_output_in_json()
 
-    @serial_test()
     @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
     def test_create_delete_snapshots(self):
         # create volume
@@ -66,13 +68,12 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
         assert len(snapshot_list) == 1
 
         # delete snapshot
-        self.cmd("az netappfiles snapshot delete -g {rg} -a %s -p %s -v %s -s %s" %
+        self.cmd("az netappfiles snapshot delete -g {rg} -a %s -p %s -v %s -s %s -y" %
                  (account_name, pool_name, volume_name, snapshot_name))
         snapshot_list = self.cmd("az netappfiles snapshot list -g {rg} -a %s -p %s -v %s" %
                                  (account_name, pool_name, volume_name)).get_output_in_json()
         assert len(snapshot_list) == 0
 
-    @serial_test()
     @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
     def test_create_volume_from_snapshot(self):
         # create volume
@@ -98,10 +99,9 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
         snapshot = self.cmd("az netappfiles snapshot show -g {rg} -a %s -p %s -v %s -s %s" %
                             (account_name, pool_name, volume_name, snapshot_name)).get_output_in_json()
         restored_volume = self.create_volume(account_name, pool_name, restored_volume_name,
-                                             snapshot_id=snapshot["snapshotId"], volume_only=volume_only)
+                                             snapshot_id=snapshot['id'], volume_only=volume_only)
         assert restored_volume['name'] == account_name + '/' + pool_name + '/' + restored_volume_name
 
-    @serial_test()
     @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
     def test_revert_volume_from_snapshot(self):
         # create volume
@@ -125,12 +125,11 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
         snapshot = self.cmd("az netappfiles snapshot show -g {rg} -a %s -p %s -v %s -s %s" %
                             (account_name, pool_name, volume_name, snapshot_name)).get_output_in_json()
         self.cmd("az netappfiles volume revert -g {rg} -a %s -p %s -v %s -s %s" %
-                 (account_name, pool_name, volume_name, snapshot["snapshotId"]))
+                 (account_name, pool_name, volume_name, snapshot['id']))
         snapshot_list = self.cmd("az netappfiles snapshot list -g {rg} -a %s -p %s -v %s" %
                                  (account_name, pool_name, volume_name)).get_output_in_json()
         assert len(snapshot_list) == 1
 
-    @serial_test()
     @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
     def test_list_snapshots(self):
         # create volume
@@ -152,7 +151,6 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
                                  (account_name, pool_name, volume_name)).get_output_in_json()
         assert len(snapshot_list) == 2
 
-    @serial_test()
     @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
     def test_get_snapshot(self):
         # create volume
@@ -175,3 +173,26 @@ class AzureNetAppFilesSnapshotServiceScenarioTest(ScenarioTest):
         # get snapshot from id
         snapshot_from_id = self.cmd("az netappfiles snapshot show --ids %s" % snapshot['id']).get_output_in_json()
         assert snapshot_from_id['name'] == account_name + '/' + pool_name + '/' + volume_name + '/' + snapshot_name
+
+    @ResourceGroupPreparer(name_prefix='cli_netappfiles_test_snapshot_', additional_tags={'owner': 'cli_test'})
+    def test_restore_file_returns_not_found(self):
+        # create volume
+        account_name = self.create_random_name(prefix='cli-acc-', length=24)
+        pool_name = self.create_random_name(prefix='cli-pool-', length=24)
+        volume_name = self.create_random_name(prefix='cli-vol-', length=24)
+        volume = self.create_volume(account_name, pool_name, volume_name)
+        assert volume['name'] == account_name + '/' + pool_name + '/' + volume_name
+
+        # create snapshot
+        snapshot_name = self.create_random_name(prefix='cli-sn-', length=24)
+        self.cmd("az netappfiles snapshot create -g {rg} -a %s -p %s -v %s -s %s -l %s" %
+                 (account_name, pool_name, volume_name, snapshot_name, LOCATION))
+
+        snapshot_file_path = "'/snap_file_path_1.txt' '/snap_file_path_2.txt'"
+
+        #with self.assertRaisesRegex(HttpResponseError, "The specified filePath /snap_file_path_1.txt does not exist"):
+        with self.assertRaises(HttpResponseError) as cm:
+            self.cmd("az netappfiles snapshot restore-files -g {rg} -a %s -p %s -v %s -s %s --file-paths %s" %
+                     (account_name, pool_name, volume_name, snapshot_name, snapshot_file_path))
+        self.assertIn('FilePath', str(
+            cm.exception))

@@ -49,6 +49,19 @@ class TestBatchValidators(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             _validators.metadata_item_format("name=value=other")
+    
+    def test_batch_resource_tag_format(self):
+        resource_tag = _validators.resource_tag_format("name=value")
+        self.assertEqual(resource_tag, {'name': 'value'})
+
+        with self.assertRaises(ValueError):
+            _validators.resource_tag_format("test")
+
+        with self.assertRaises(ValueError):
+            _validators.resource_tag_format("name=value=other")
+
+        with self.assertRaises(ValueError):
+            _validators.resource_tag_format("")
 
     def test_batch_environment_setting_format(self):
         env = _validators.environment_setting_format("name=value")
@@ -554,13 +567,13 @@ class TestBatchLoader(unittest.TestCase):  # pylint: disable=protected-access
         attrs = list(self.command_job._get_attrs(models.JobManagerTask, 'job.job_manager_task'))
         self.assertEqual(len(attrs), 7)
         attrs = list(self.command_job._get_attrs(models.JobAddParameter, 'job'))
-        self.assertEqual(len(attrs), 8)
+        self.assertEqual(len(attrs), 10)
 
     def test_batch_load_arguments(self):
         # pylint: disable=too-many-statements
         handler = operations._pool_operations.PoolOperations.add
         args = list(self.command_pool._load_transformed_arguments(handler))
-        self.assertEqual(len(args), 30)
+        self.assertEqual(len(args), 50)
         self.assertFalse('yes' in [a for a, _ in args])
         self.assertTrue('json_file' in [a for a, _ in args])
         self.assertFalse('destination' in [a for a, _ in args])
@@ -572,7 +585,7 @@ class TestBatchLoader(unittest.TestCase):  # pylint: disable=protected-access
         self.assertTrue('account_endpoint' in [a for a, _ in args])
         handler = operations._job_operations.JobOperations.add
         args = list(self.command_job._load_transformed_arguments(handler))
-        self.assertEqual(len(args), 18)
+        self.assertEqual(len(args), 19)
         self.assertFalse('yes' in [a for a, _ in args])
         self.assertTrue('json_file' in [a for a, _ in args])
         self.assertFalse('destination' in [a for a, _ in args])
@@ -605,7 +618,7 @@ class TestBatchLoader(unittest.TestCase):  # pylint: disable=protected-access
         self.assertFalse('destination' in [a for a, _ in args])
         handler = operations._job_schedule_operations.JobScheduleOperations.add
         args = [a for a, _ in self.command_conflicts._load_transformed_arguments(handler)]
-        self.assertEqual(len(args), 22)
+        self.assertEqual(len(args), 23)
         self.assertTrue('id' in args)
         self.assertTrue('job_manager_task_id' in args)
         self.assertFalse('job_manager_task_max_wall_clock_time' in args)

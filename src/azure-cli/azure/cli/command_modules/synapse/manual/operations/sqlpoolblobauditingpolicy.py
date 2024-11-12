@@ -35,12 +35,10 @@ def sqlpool_blob_auditing_policy_update(
         event_hub_target_state=None,
         event_hub_authorization_rule_id=None,
         event_hub=None,
-        is_azure_monitor_target_enabled=None,
-        blob_auditing_policy_name=None):
+        is_azure_monitor_target_enabled=None):
     """
     Updates a sql pool blob auditing policy. Custom update function to apply parameters to instance.
     """
-
     _audit_policy_update(
         cmd=cmd,
         instance=instance,
@@ -71,6 +69,7 @@ def sqlserver_blob_auditing_policy_update(
         instance,
         workspace_name,
         resource_group_name,
+        blob_auditing_policy_name='default',
         state=None,
         blob_storage_target_state=None,
         storage_account=None,
@@ -86,8 +85,7 @@ def sqlserver_blob_auditing_policy_update(
         storage_account_subscription_id=None,
         is_storage_secondary_key_in_use=None,
         is_azure_monitor_target_enabled=None,
-        queue_delay_milliseconds=None,
-        blob_auditing_policy_name=None):
+        queue_delay_milliseconds=None):
     _audit_policy_update(
         cmd=cmd,
         instance=instance,
@@ -459,7 +457,7 @@ def _get_diagnostic_settings(
         cmd=cmd, resource_group_name=resource_group_name,
         workspace_name=workspace_name, sql_pool_name=sql_pool_name)
     azure_monitor_client = cf_monitor(cmd.cli_ctx)
-    return azure_monitor_client.diagnostic_settings.list(diagnostic_settings_url)
+    return list(azure_monitor_client.diagnostic_settings.list(diagnostic_settings_url))
 
 
 def _get_diagnostic_settings_url(
@@ -533,8 +531,8 @@ def _audit_policy_update_apply_azure_monitor_target_enabled(
     else:
         # Sort received diagnostic settings by name and get first element to ensure consistency
         # between command executions
-        diagnostic_settings.value.sort(key=lambda d: d.name)
-        audit_diagnostic_setting = _fetch_first_audit_diagnostic_setting(diagnostic_settings.value, category_name)
+        diagnostic_settings.sort(key=lambda d: d.name)
+        audit_diagnostic_setting = _fetch_first_audit_diagnostic_setting(diagnostic_settings, category_name)
 
         # Determine value of is_azure_monitor_target_enabled
         if audit_diagnostic_setting is None:
@@ -575,7 +573,7 @@ def _audit_policy_update_diagnostic_settings(
     '''
 
     # Fetch all audit diagnostic settings
-    audit_diagnostic_settings = _fetch_all_audit_diagnostic_settings(diagnostic_settings.value, category_name)
+    audit_diagnostic_settings = _fetch_all_audit_diagnostic_settings(diagnostic_settings, category_name)
     num_of_audit_diagnostic_settings = len(audit_diagnostic_settings)
 
     # If more than 1 audit diagnostic settings found then throw error
@@ -895,15 +893,14 @@ def _get_diagnostic_settings(
         workspace_name=workspace_name, sql_pool_name=sql_pool_name)
     azure_monitor_client = cf_monitor(cmd.cli_ctx)
 
-    return azure_monitor_client.diagnostic_settings.list(diagnostic_settings_url)
+    return list(azure_monitor_client.diagnostic_settings.list(diagnostic_settings_url))
 
 
 def workspace_audit_policy_show(
         cmd,
         client,
         workspace_name,
-        resource_group_name,
-        blob_auditing_policy_name=None):
+        resource_group_name):
     '''
     Show workspace audit policy
     '''
@@ -913,7 +910,6 @@ def workspace_audit_policy_show(
         client=client,
         resource_group_name=resource_group_name,
         workspace_name=workspace_name,
-        blob_auditing_policy_name=blob_auditing_policy_name,
         category_name='SQLSecurityAuditEvents')
 
 
@@ -922,8 +918,7 @@ def sqlpool_audit_policy_show(
         client,
         workspace_name,
         resource_group_name,
-        sql_pool_name,
-        blob_auditing_policy_name=None):
+        sql_pool_name):
     '''
     Show sql pool audit policy
     '''
@@ -934,7 +929,6 @@ def sqlpool_audit_policy_show(
         resource_group_name=resource_group_name,
         workspace_name=workspace_name,
         sql_pool_name=sql_pool_name,
-        blob_auditing_policy_name=blob_auditing_policy_name,
         category_name='SQLSecurityAuditEvents')
 
 
@@ -944,8 +938,7 @@ def _audit_policy_show(
         resource_group_name,
         workspace_name,
         sql_pool_name=None,
-        category_name=None,
-        blob_auditing_policy_name=None):
+        category_name=None):
     '''
     Common code to get workspace or sqlpool audit policy including diagnostic settings
     '''
@@ -955,7 +948,7 @@ def _audit_policy_show(
         audit_policy = client.get(
             resource_group_name=resource_group_name,
             workspace_name=workspace_name,
-            blob_auditing_policy_name=blob_auditing_policy_name)
+            blob_auditing_policy_name='default')
     else:
         audit_policy = client.get(
             resource_group_name=resource_group_name,
@@ -985,8 +978,8 @@ def _audit_policy_show(
         workspace_name=workspace_name, sql_pool_name=sql_pool_name)
 
     # Sort received diagnostic settings by name and get first element to ensure consistency between command executions
-    diagnostic_settings.value.sort(key=lambda d: d.name)
-    audit_diagnostic_setting = _fetch_first_audit_diagnostic_setting(diagnostic_settings.value, category_name)
+    diagnostic_settings.sort(key=lambda d: d.name)
+    audit_diagnostic_setting = _fetch_first_audit_diagnostic_setting(diagnostic_settings, category_name)
 
     # Initialize azure monitor properties
     if audit_diagnostic_setting is not None:

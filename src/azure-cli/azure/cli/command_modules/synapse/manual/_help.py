@@ -37,14 +37,27 @@ examples:
         az synapse workspace create --name testworkspace --resource-group rg \\
           --storage-account testadlsgen2 --file-system testfilesystem \\
           --sql-admin-login-user cliuser1 --sql-admin-login-password Password123! --location "East US" \\
-          --key-identifier https://{keyvaultname}.vault.azure.net/keys/{keyname} --key-name testcmk
+          --key-identifier https://{keyvaultname}.vault.azure.net/keys/{keyname} --key-name testcmk \\
+          --use-sami-in-encrypt True
   - name: Create a Synapse workspace connecting to azure devops
     text: |-
         az synapse workspace create --name testworkspace --resource-group rg \\
           --storage-account testadlsgen2 --file-system testfilesystem \\
           --sql-admin-login-user cliuser1 --sql-admin-login-password Password123! --location "East US" \\
           --repository-type AzureDevOpsGit --account-name testuser --project-name testprj \\
-          --repository-name testrepo --collaboration-branch main
+          --repository-name testrepo --collaboration-branch main --last-commit-id 000000
+  - name: Create a Synapse workspace with managed resource group
+    text: |-
+        az synapse workspace create --name testworkspace --resource-group rg \\
+          --managed-rg-name managedrg \\
+          --storage-account testadlsgen2 --file-system testfilesystem \\
+          --sql-admin-login-user cliuser1 --sql-admin-login-password Password123! --location "East US"
+  - name: Create a Synapse workspace with user assigned managed identity
+    text: |-
+        az synapse workspace create --name testworkspace --resource-group rg \\
+          --storage-account testadlsgen2 --file-system testfilesystem \\
+          --sql-admin-login-user cliuser1 --sql-admin-login-password Password123! --location "East US" \\
+          --uami-id "{your-first-uami-resourceid}" "{your-second-uami-resourceid}"
 """
 
 helps['synapse workspace list'] = """
@@ -76,6 +89,22 @@ examples:
     text: |-
         az synapse workspace update --name fromcli4 --resource-group rg \\
           --tags key1=value1
+  - name: Update a Synapse workspace, add user assigned managed identity
+    text: |-
+        az synapse workspace update --name fromcli4 --resource-group rg \\
+        --uami-action Add --uami-id "{your-first-uami-resourceid}" "{your-second-uami-resourceid}"
+  - name: Update a Synapse workspace, remove user assigned managed identity
+    text: |-
+        az synapse workspace update --name fromcli4 --resource-group rg \\
+        --uami-action Remove --uami-id "{your-first-uami-resourceid}" "{your-second-uami-resourceid}"
+  - name: Update a Synapse workspace, rewrite user assigned managed identity
+    text: |-
+        az synapse workspace update --name fromcli4 --resource-group rg \\
+        --uami-action Set --uami-id "{your-first-uami-resourceid}" "{your-second-uami-resourceid}"
+  - name: Update a Synapse workspace, set workspace encryption uami
+    text: |-
+        az synapse workspace update --name fromcli4 --resource-group rg \\
+        --uami-id-in-encrypt "{your-encrytion-uami-resourceid}" --use-sami-in-encrypt False
 """
 
 helps['synapse workspace delete'] = """
@@ -118,7 +147,7 @@ examples:
   - name: Create a Spark pool.
     text: |-
         az synapse spark pool create --name testpool --workspace-name testsynapseworkspace --resource-group rg \\
-        --spark-version 2.4 --node-count 3 --node-size Medium
+        --spark-version 2.4 --node-count 3 --node-size Medium --spark-config-file-path 'path/configfile.txt'
 """
 
 helps['synapse spark pool list'] = """
@@ -155,6 +184,14 @@ examples:
     text: |-
         az synapse spark pool update --name testpool --workspace-name testsynapseworkspace --resource-group rg \\
         --package-action Add --package package1.jar package2.jar
+  - name: Update the Spark pool's configuration file.
+    text: |-
+        az synapse spark pool update --name testpool --workspace-name testsynapseworkspace --resource-group rg \\
+        --spark-config-file-path 'path/configfile.txt'
+  - name: Update the Spark pool's dynamic executor allocation configuration.
+    text: |-
+        az synapse spark pool update --name testpool --workspace-name testsynapseworkspace --resource-group rg \\
+        --enable-dynamic-exec --min-executors 3 --max-executors 10
 """
 
 helps['synapse spark pool delete'] = """
@@ -235,8 +272,7 @@ short-summary: Get a SQL's auditing policy.
 examples:
   - name: Get a SQL's auditing policy.
     text: |-
-        az synapse sql audit-policy show --workspace-name testsynapseworkspace --resource-group rg \\
-        --blob-auditing-policy-name bapolicyname
+        az synapse sql audit-policy show --workspace-name testsynapseworkspace --resource-group rg
 """
 
 helps['synapse sql audit-policy update'] = """
@@ -247,49 +283,47 @@ examples:
   - name: Enable by storage account name.
     text: |
         az synapse sql audit-policy update --workspace-name testsynapseworkspace --resource-group rg --state Enabled \\
-            --blob-storage-target-state Enabled --storage-account mystorage --blob-auditing-policy-name bapname
+            --blob-storage-target-state Enabled --storage-account mystorage
   - name: Enable by storage endpoint and key.
     text: |
         az synapse sql audit-policy update --workspace-name testsynapseworkspace --resource-group rg --state Enabled \\
             --blob-storage-target-state Enabled --storage-endpoint https://mystorage.blob.core.windows.net \\
-            --storage-key MYKEY== --blob-auditing-policy-name bapname
+            --storage-key MYKEY==
   - name: Set the list of audit actions.
     text: |
         az synapse sql audit-policy update --workspace-name testsynapseworkspace --resource-group rg \\
-        --actions SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP 'UPDATE on database::mydb by public' \\
-        --blob-auditing-policy-name bapolicyname
+        --actions SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP 'UPDATE on database::mydb by public'
   - name: Disable an auditing policy.
     text: |-
         az synapse sql audit-policy update --workspace-name testsynapseworkspace --resource-group rg \\
-        --state Disabled --blob-auditing-policy-name bapolicyname
+        --state Disabled
   - name: Disable a blob storage auditing policy.
     text: |-
         az synapse sql audit-policy update --workspace-name testsynapseworkspace --resource-group rg \\
-        --blob-storage-target-state Disabled --blob-auditing-policy-name bapname
+        --blob-storage-target-state Disabled
   - name: Enable a log analytics auditing policy.
     text: |
         az synapse sql audit-policy update --resource-group mygroup --workspace-name myws --state Enabled \\
-            --log-analytics-target-state Enabled --log-analytics-workspace-resource-id myworkspaceresourceid \\
-            --blob-auditing-policy-name bapname
+            --log-analytics-target-state Enabled --log-analytics-workspace-resource-id myworkspaceresourceid
   - name: Disable a log analytics auditing policy.
     text: |
         az synapse sql audit-policy update --resource-group mygroup --workspace-name myws --state Enabled
-            --log-analytics-target-state Disabled --blob-auditing-policy-name bapname
+            --log-analytics-target-state Disabled
   - name: Enable an event hub auditing policy.
     text: |
         az synapse sql audit-policy update --resource-group mygroup --workspace-name myws --state Enabled \\
             --event-hub-target-state Enabled \\
             --event-hub-authorization-rule-id eventhubauthorizationruleid \\
-            --event-hub eventhubname --blob-auditing-policy-name bapname
+            --event-hub eventhubname
   - name: Enable an event hub auditing policy for default event hub.
     text: |
         az synapse sql audit-policy update --resource-group mygroup --workspace-name myws --state Enabled \\
             --event-hub-target-state Enabled \\
-            --event-hub-authorization-rule-id eventhubauthorizationruleid --blob-auditing-policy-name bapname
+            --event-hub-authorization-rule-id eventhubauthorizationruleid
   - name: Disable an event hub auditing policy.
     text: |
         az synapse sql audit-policy update --resource-group mygroup --workspace-name myws
-           --state Enabled --event-hub-target-state Disabled --blob-auditing-policy-name bapname
+           --state Enabled --event-hub-target-state Disabled
 """
 
 helps['synapse sql audit-policy wait'] = """
@@ -309,7 +343,7 @@ examples:
   - name: Create a SQL pool.
     text: |-
         az synapse sql pool create --name sqlpool --performance-level "DW1000c" \\
-        --workspace-name testsynapseworkspace --resource-group rg
+        --workspace-name testsynapseworkspace --resource-group rg --collation "SQL_Latin1_General_CP1_CS_AS"
 """
 
 helps['synapse sql pool show'] = """
@@ -503,7 +537,7 @@ examples:
   - name: Set a SQL pool's transparent data encryption configuration. (autogenerated)
     text: |-
         az synapse sql pool tde set --name sqlpool --workspace-name testsynapseworkspace --resource-group rg \\
-        --status Enabled --transparent-data-encryption-name tdename
+        --status Enabled --transparent-data-encryption-name current
 """
 
 helps['synapse sql pool tde show'] = """
@@ -513,7 +547,7 @@ examples:
   - name: Get a SQL pool's transparent data encryption configuration. (autogenerated)
     text: |-
         az synapse sql pool tde show --name sqlpool --workspace-name testsynapseworkspace --resource-group rg \\
-        --transparent-data-encryption-name tdename
+        --transparent-data-encryption-name current
 """
 
 helps['synapse sql pool threat-policy'] = """
@@ -582,51 +616,47 @@ examples:
   - name: Enable by storage account name.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg --state Enabled --blob-storage-target-state Enabled --storage-account mystorage \\
-        --blob-auditing-policy-name bapname
+        --resource-group rg --state Enabled --blob-storage-target-state Enabled --storage-account mystorage
   - name: Enable by storage endpoint and key.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
         --resource-group rg --state Enabled --blob-storage-target-state Enabled \\
-        --storage-endpoint https://mystorage.blob.core.windows.net --storage-key MYKEY== \\
-        --blob-auditing-policy-name bapname
+        --storage-endpoint https://mystorage.blob.core.windows.net --storage-key MYKEY==
   - name: Set the list of audit actions.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg --actions SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP 'UPDATE on database::mydb by public' \\
-        --blob-auditing-policy-name bapname
+        --resource-group rg --actions SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP 'UPDATE on database::mydb by public'
   - name: Disable an auditing policy.
     text: |-
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg --state Disabled --blob-auditing-policy-name bapname
+        --resource-group rg --state Disabled
   - name: Disable a blob storage auditing policy.
     text: |-
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg --blob-storage-target-state Disabled --blob-auditing-policy-name bapname
+        --resource-group rg --blob-storage-target-state Disabled
   - name: Enable a log analytics auditing policy.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
         --resource-group rg --state Enabled --log-analytics-target-state Enabled \\
-        --log-analytics-workspace-resource-id myworkspaceresourceid --blob-auditing-policy-name bapname
+        --log-analytics-workspace-resource-id myworkspaceresourceid
   - name: Disable a log analytics auditing policy.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg --log-analytics-target-state Disabled --blob-auditing-policy-name bapname
+        --resource-group rg --log-analytics-target-state Disabled
   - name: Enable an event hub auditing policy.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
         --resource-group rg --state Enabled --event-hub-target-state Enabled \\
-        --event-hub-authorization-rule-id eventhubauthorizationruleid --event-hub eventhubname \\
-        --blob-auditing-policy-name bapname
+        --event-hub-authorization-rule-id eventhubauthorizationruleid --event-hub eventhubname
   - name: Enable an event hub auditing policy for default event hub.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
         --resource-group rg --state Enabled --event-hub-target-state Enabled \\
-        --event-hub-authorization-rule-id eventhubauthorizationruleid --blob-auditing-policy-name bapname
+        --event-hub-authorization-rule-id eventhubauthorizationruleid
   - name: Disable an event hub auditing policy.
     text: |
         az synapse sql pool audit-policy update --name sqlpool --workspace-name testsynapseworkspace \\
-        --resource-group rg  --event-hub-target-state Disabled --blob-auditing-policy-name bapname
+        --resource-group rg  --event-hub-target-state Disabled
 """
 
 helps['synapse workspace key'] = """
@@ -1021,6 +1051,12 @@ examples:
         az synapse role assignment create --workspace-name testsynapseworkspace \\
         --item-type "bigDataPools" --item "bigDataPoolName" --role "Synapse Administrator" \\
         --assignee username@contoso.com
+  - name: When you are a user with permission to manage Azure RBAC role assignment on the workspace but not a Synapse Administrator, please create role assigment by -role roleid. The reason for this is , when you try to add a "Synapse Administrator" role, the cmdlet needs to get the role ID from the role name which requires workspace read permission, which the current user does not have.
+    text: |-
+        az synapse role assignment create \\
+        --workspace-name testsynapseworkspace \\
+        --role "6e4bf58a-b8e1-4cc3-bbf9-d73143322b78" \\
+        --assignee username@contoso.com
 """
 
 helps['synapse role assignment delete'] = """
@@ -1097,30 +1133,30 @@ helps['synapse linked-service create'] = """
 type: command
 short-summary: Create a linked service.
 examples:
-  - name: Create a linked service.
+  - name: Create a linked service. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse linked-service create --workspace-name testsynapseworkspace \\
-          --name testlinkedservice --file @path/linkedservice.json
+          --name testlinkedservice --file @"path/linkedservice.json"
 """
 
 helps['synapse linked-service update'] = """
 type: command
 short-summary: Update an exist linked service.
 examples:
-  - name: Update an exist linked service.
+  - name: Update an exist linked service. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse linked-service update --workspace-name testsynapseworkspace \\
-          --name testlinkedservice --file @path/linkedservice.json
+          --name testlinkedservice --file @"path/linkedservice.json"
 """
 
 helps['synapse linked-service set'] = """
 type: command
 short-summary: Update an exist linked service.
 examples:
-  - name: Update an exist linked service.
+  - name: Update an exist linked service. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse linked-service set --workspace-name testsynapseworkspace \\
-          --name testlinkedservice --file @path/linkedservice.json
+          --name testlinkedservice --file @"path/linkedservice.json"
 """
 
 helps['synapse linked-service show'] = """
@@ -1161,30 +1197,30 @@ helps['synapse dataset create'] = """
 type: command
 short-summary: Create a dataset.
 examples:
-  - name: Create a dataset.
+  - name: Create a dataset. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse dataset create --workspace-name testsynapseworkspace \\
-          --name testdataset --file @path/dataset.json
+          --name testdataset --file @"path/dataset.json"
 """
 
 helps['synapse dataset update'] = """
 type: command
 short-summary: Update an exist dataset.
 examples:
-  - name: Update an exist dataset.
+  - name: Update an exist dataset. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse dataset update --workspace-name testsynapseworkspace \\
-          --name testdataset --file @path/dataset.json
+          --name testdataset --file @"path/dataset.json"
 """
 
 helps['synapse dataset set'] = """
 type: command
 short-summary: Update an exist dataset.
 examples:
-  - name: Update an exist dataset.
+  - name: Update an exist dataset. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse dataset set --workspace-name testsynapseworkspace \\
-          --name testdataset --file @path/dataset.json
+          --name testdataset --file @"path/dataset.json"
 """
 
 helps['synapse dataset show'] = """
@@ -1225,30 +1261,30 @@ helps['synapse pipeline create'] = """
 type: command
 short-summary: Create a pipeline.
 examples:
-  - name: Create a pipeline.
+  - name: Create a pipeline. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse pipeline create --workspace-name testsynapseworkspace \\
-          --name testpipeline --file @path/pipeline.json
+          --name testpipeline --file @"path/pipeline.json"
 """
 
 helps['synapse pipeline update'] = """
 type: command
 short-summary: Update an exist pipeline.
 examples:
-  - name: Update an exist pipeline.
+  - name: Update an exist pipeline. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse pipeline update --workspace-name testsynapseworkspace \\
-          --name testpipeline --file @path/pipeline.json
+          --name testpipeline --file @"path/pipeline.json"
 """
 
 helps['synapse pipeline set'] = """
 type: command
 short-summary: Update an exist pipeline.
 examples:
-  - name: Update an exist pipeline.
+  - name: Update an exist pipeline. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse pipeline set --workspace-name testsynapseworkspace \\
-          --name testpipeline --file @path/pipeline.json
+          --name testpipeline --file @"path/pipeline.json"
 """
 
 helps['synapse pipeline show'] = """
@@ -1351,30 +1387,30 @@ helps['synapse trigger create'] = """
 type: command
 short-summary: Create a trigger.
 examples:
-  - name: Create a trigger.
+  - name: Create a trigger. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse trigger create --workspace-name testsynapseworkspace \\
-          --name testtrigger --file @path/trigger.json
+          --name testtrigger --file @"path/trigger.json"
 """
 
 helps['synapse trigger update'] = """
 type: command
 short-summary: Update an exist trigger.
 examples:
-  - name: Update an exist trigger.
+  - name: Update an exist trigger. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse trigger update --workspace-name testsynapseworkspace \\
-          --name testtrigger --file @path/trigger.json
+          --name testtrigger --file @"path/trigger.json"
 """
 
 helps['synapse trigger set'] = """
 type: command
 short-summary: Update an exist trigger.
 examples:
-  - name: Update an exist trigger.
+  - name: Update an exist trigger. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse trigger set --workspace-name testsynapseworkspace \\
-          --name testtrigger --file @path/trigger.json
+          --name testtrigger --file @"path/trigger.json"
 """
 
 helps['synapse trigger show'] = """
@@ -1506,20 +1542,20 @@ helps['synapse data-flow create'] = """
 type: command
 short-summary: Create a data flow.
 examples:
-  - name: Create a data flow.
+  - name: Create a data flow. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse data-flow create --workspace-name testsynapseworkspace \\
-          --name testdataflow --file @path/dataflow.json
+          --name testdataflow --file @"path/dataflow.json"
 """
 
 helps['synapse data-flow set'] = """
 type: command
 short-summary: Set an exist data flow.
 examples:
-  - name: Set an exist data flow.
+  - name: Set an exist data flow. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse data-flow set --workspace-name testsynapseworkspace \\
-          --name testdataflow --file @path/dataflow.json
+          --name testdataflow --file @"path/dataflow.json"
 """
 
 helps['synapse data-flow show'] = """
@@ -1560,30 +1596,30 @@ helps['synapse notebook create'] = """
 type: command
 short-summary: Create a notebook.
 examples:
-  - name: Create a notebook.
+  - name: Create a notebook. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse notebook create --workspace-name testsynapseworkspace \\
-          --name testnotebook --file @path/notebook.ipynb --folder-path 'folder/subfolder'
+          --name testnotebook --file @"path/notebook.ipynb" --folder-path 'folder/subfolder'
 """
 
 helps['synapse notebook set'] = """
 type: command
 short-summary: Set an exist notebook.
 examples:
-  - name: Set an exist notebook.
+  - name: Set an exist notebook. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse notebook set --workspace-name testsynapseworkspace \\
-          --name testnotebook --file @path/notebook.ipynb --folder-path 'folder/subfolder'
+          --name testnotebook --file @"path/notebook.ipynb" --folder-path 'folder/subfolder'
 """
 
 helps['synapse notebook import'] = """
 type: command
 short-summary: Import a notebook.
 examples:
-  - name: Import a notebook.
+  - name: Import a notebook. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse notebook import --workspace-name testsynapseworkspace \\
-          --name testnotebook --file @path/notebook.ipynb --folder-path 'folder/subfolder'
+          --name testnotebook --file @"path/notebook.ipynb" --folder-path 'folder/subfolder'
 """
 
 helps['synapse notebook show'] = """
@@ -1925,12 +1961,12 @@ helps['synapse managed-private-endpoints create'] = """
 type: command
 short-summary: Create a synapse managed private endpoints.
 examples:
-  - name: Create a synapse managed private endpoints.
+  - name: Create a synapse managed private endpoints. Definition file should contains privateLinkResourceId and groupId.
     text: |-
         az synapse managed-private-endpoints create --workspace-name testsynapseworkspace \\
           --pe-name testendpointname \\
-          --resource-id '/subscriptions/yoursub/resourceGroups/myResourceGroup/providers/Microsoft.Storage/accounts/myStorageAccount' \\
-          --group-Id blob
+          --file @path/test.json
+        test.json {"privateLinkResourceId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test/providers/Microsoft.Storage/storageAccounts/test", "groupId": "blob"}
 """
 
 helps['synapse managed-private-endpoints list'] = """
@@ -1990,20 +2026,20 @@ helps['synapse spark-job-definition create'] = """
 type: command
 short-summary: Create a spark job definition.
 examples:
-  - name: Create a spark job definition.
+  - name: Create a spark job definition. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse spark-job-definition create --workspace-name testsynapseworkspace \\
-          --name testsjdname --file @path/test.json --folder-path 'folder/subfolder'
+          --name testsjdname --file @"path/test.json" --folder-path 'folder/subfolder'
 """
 
 helps['synapse spark-job-definition update'] = """
 type: command
 short-summary: Update a spark job definition.
 examples:
-  - name: Update a spark job definition.
+  - name: Update a spark job definition. Pay attention to add "@" at the front of the file path as the best practice for complex arguments like JSON string.
     text: |-
         az synapse spark-job-definition update --workspace-name testsynapseworkspace \\
-          --name testsjdname --file @path/test.json --folder-path 'folder/subfolder'
+          --name testsjdname --file @"path/test.json" --folder-path 'folder/subfolder'
 """
 
 helps['synapse spark-job-definition wait'] = """
@@ -2134,4 +2170,389 @@ true --workspace-uid "11111111-2222-3333-444444444444" --sku name="Storage optim
 helps['synapse kusto'] = """
     type: group
     short-summary: "Manage synapse kusto"
+"""
+
+
+helps['synapse kql-script'] = """
+    type: group
+    short-summary: Manage script with kusto
+"""
+
+helps['synapse kql-script show'] = """
+    type: command
+    short-summary: "Gets a KQL script."
+    examples:
+      - name: KustoScriptsGet
+        text: |-
+               az synapse kql-script show --workspace-name "kustoWorkspaceName" --name "kustoScript1"
+"""
+
+helps['synapse kql-script list'] = """
+    type: command
+    short-summary: "List KQL scripts."
+    examples:
+      - name: KustoScriptsList
+        text: |-
+               az synapse kql-script list --workspace-name "kustoWorkspaceName"
+"""
+
+helps['synapse kql-script create'] = """
+    type: command
+    short-summary: "Creates a KQL script."
+    examples:
+      - name: KustoScriptsCreateOrUpdate
+        text: |-
+               az synapse kql-script create --resource-group "kustorptest" --workspace-name "kustoWorkspaceName" \
+               --kusto-pool-name kustopooltest --kusto-database-name kustodbtest --file C:\\samples\\KqlScript.kql \
+               --name "kustoScript1"
+"""
+
+helps['synapse kql-script import'] = """
+    type: command
+    short-summary: "Creates a KQL script."
+    examples:
+      - name: KustoScriptsCreateOrUpdate
+        text: |-
+               az synapse kql-script import --resource-group "kustorptest" --workspace-name "kustoWorkspaceName" \
+               --kusto-pool-name kustopooltest --kusto-database-name kustodbtest --file C:\\samples\\KqlScript.kql \
+               --name "kustoScript1"
+"""
+
+helps['synapse kql-script export'] = """
+    type: command
+    short-summary: "Export KQL scripts."
+    examples:
+      - name: KustoScriptsExport
+        text: |-
+               az synapse kql-script export --workspace-name "kustoWorkspaceName" --output-folder "C:\\KqlScirpt"
+"""
+
+helps['synapse kql-script delete'] = """
+    type: command
+    short-summary: "Deletes a KQL script"
+    examples:
+      - name: KustoScriptsDelete
+        text: |-
+               az synapse kql-script delete --workspace-name "kustoWorkspaceName" --name "kustoScript1"
+"""
+
+helps['synapse kql-script wait'] = """
+    type: command
+    short-summary: "Place the CLI in a waiting state until a condition of a KQL script is met."
+"""
+
+helps['synapse sql-script'] = """
+type: group
+short-summary: Manage SQL scripts in a synapse workspace.
+"""
+
+helps['synapse sql-script list'] = """
+type: command
+short-summary: List SQL scripts in a synapse workspace.
+examples:
+  - name: List SQL scripts.
+    text: |-
+        az synapse sql-script list --workspace-name testsynapseworkspace
+"""
+
+helps['synapse sql-script show'] = """
+type: command
+short-summary: Get a SQL script.
+examples:
+  - name: Get a SQL script.
+    text: |-
+        az synapse sql-script show --workspace-name testsynapseworkspace \\
+          --name testsqlscriptname
+"""
+
+helps['synapse sql-script delete'] = """
+type: command
+short-summary: Delete a SQL script.
+examples:
+  - name: Delete a SQL script.
+    text: |-
+        az synapse sql-script delete --workspace-name testsynapseworkspace \\
+          --name testsqlscriptname
+"""
+
+helps['synapse sql-script create'] = """
+type: command
+short-summary: Create or update a SQL script.
+examples:
+  - name: Create a SQL script.
+    text: |-
+        az synapse sql-script create --workspace-name testsynapseworkspace \\
+          --name testsqlscriptname \\
+          --file 'path/test.sql'
+"""
+
+helps['synapse sql-script export'] = """
+type: command
+short-summary: Export a SQL script.
+examples:
+  - name: Export a SQL script.
+    text: |-
+        az synapse sql-script export --workspace-name testsynapseworkspace \\
+          --name testsqlscriptname \\
+          --output-folder 'path/folder'
+"""
+
+helps['synapse sql-script wait'] = """
+type: command
+short-summary: Place the CLI in a waiting state until a condition of a sql script is met.
+"""
+
+helps['synapse sql-script import'] = """
+type: command
+short-summary: Import a SQL script.
+examples:
+  - name: Import a SQL script.
+    text: |-
+        az synapse sql-script import --workspace-name testsynapseworkspace \\
+          --name testsqlscriptname \\
+          --file 'path/test.sql'
+"""
+
+helps['synapse ad-only-auth'] = """
+type: group
+short-summary: Manage Azure Active Directly only Authentication settings for this Synapse workspace.
+"""
+
+helps['synapse ad-only-auth get'] = """
+type: command
+short-summary: Get a specific Azure Active Directly only Authentication property.
+examples:
+  - name: Get a specific Azure Active Directly only Authentication property.
+    text: |-
+        az synapse ad-only-auth get --workspace-name testsynapseworkspace \\
+          -g testrg
+"""
+
+helps['synapse ad-only-auth enable'] = """
+type: command
+short-summary: Enable Azure Active Directly only Authentication for this Synapse workspace.
+examples:
+  - name: Enable Azure Active Directly only Authentication for this Synapse workspace.
+    text: |-
+        az synapse ad-only-auth enable --workspace-name testsynapseworkspace \\
+          -g testresourcegroup
+"""
+
+helps['synapse ad-only-auth disable'] = """
+type: command
+short-summary: Disable Azure Active Directly only Authentication for this Synapse workspace.
+examples:
+  - name: Disable Azure Active Directly only Authentication for this Synapse workspace.
+    text: |-
+        az synapse ad-only-auth disable --workspace-name testsynapseworkspace \\
+          -g testresourcegroup
+"""
+
+helps['synapse link-connection'] = """
+type: group
+short-summary: Manage Synapse's link connection.
+"""
+
+helps['synapse link-connection list'] = """
+type: command
+short-summary: List link connections in a synapse workspace.
+examples:
+  - name: List link connections.
+    text: |-
+        az synapse link-connection list --workspace-name testsynapseworkspace
+"""
+
+helps['synapse link-connection show'] = """
+type: command
+short-summary: Get a link connection.
+examples:
+  - name: Get a link-connection.
+    text: |-
+        az synapse link-connection show --workspace-name testsynapseworkspace \\
+          --name testlinkconectionname
+"""
+
+helps['synapse link-connection delete'] = """
+type: command
+short-summary: Delete a link connection.
+examples:
+  - name: Delete a link connection.
+    text: |-
+        az synapse link-connection delete --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname
+"""
+
+helps['synapse link-connection create'] = """
+type: command
+short-summary: Create a link connection.
+examples:
+  - name: Create a link connection.
+          Definition.json sample is
+          {
+            "name":"sampleLinkConnection", // please change to your link connection name
+            "properties":{
+            "sourceDatabase":{
+              "typeProperties":{ // please change to your source database resourceId and principalId
+              "resourceId":"/subscriptions/sampleSubscriptionId/resourceGroups/sampleResourceGroup/providers/Microsoft.Sql/servers/sampleServer",
+              "principalId":"xxxxxxxxxx"
+            },
+            "linkedService":{
+              "referenceName":"sampleLinkServiceReference", // please change to your source database link service name
+              "type":"LinkedServiceReference"
+              }
+            },
+            "targetDatabase":{
+              "linkedService":{
+                "referenceName":"sampleLinkServiceReference", // please change to your target database link service name
+                "type":"LinkedServiceReference",
+                "parameters":{
+                  "DBName":"v2"
+                }
+              }
+            },
+            "compute":{
+              "coreCount":16,
+              "computeType":"General"
+              }
+            }
+          }
+    text: |-
+        az synapse link-connection create --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname \\
+          --file @"path/definition.json"
+"""
+
+helps['synapse link-connection update'] = """
+type: command
+short-summary: Update a link connection.
+examples:
+  - name: Update a link connnection.
+          Definition.json sample is
+          {
+            "name":"sampleLinkConnection", // please change to your link connection name
+            "properties":{
+            "sourceDatabase":{
+              "typeProperties":{ // please change to your source database resourceId and principalId
+              "resourceId":"/subscriptions/sampleSubscriptionId/resourceGroups/sampleResourceGroup/providers/Microsoft.Sql/servers/sampleServer",
+              "principalId":"xxxxxxxxxx"
+            },
+            "linkedService":{
+              "referenceName":"sampleLinkServiceReference", // please change to your source database link service name
+              "type":"LinkedServiceReference"
+              }
+            },
+            "targetDatabase":{
+              "linkedService":{
+                "referenceName":"sampleLinkServiceReference", // please change to your target database link service name
+                "type":"LinkedServiceReference",
+                "parameters":{
+                  "DBName":"v2"
+                }
+              }
+            },
+            "compute":{
+              "coreCount":16,
+              "computeType":"General"
+              }
+            }
+          }
+    text: |-
+        az synapse link-connection update --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname \\
+          --file @"path/definition.json"
+"""
+
+helps['synapse link-connection start'] = """
+type: command
+short-summary: Start a link connnection.
+examples:
+  - name: Start a link connection.
+    text: |-
+        az synapse link-connection start --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname
+"""
+
+helps['synapse link-connection stop'] = """
+type: command
+short-summary: Stop a link connection.
+examples:
+  - name: Stop a link connection.
+    text: |-
+        az synapse link-connection stop --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname
+"""
+
+helps['synapse link-connection get-status'] = """
+type: command
+short-summary: check a link connection status after start/stop a link connection.
+examples:
+  - name: Stop a link connection.
+    text: |-
+        az synapse link-connection get-status --workspace-name testsynapseworkspace \\
+          --name testlinkconnectionname
+"""
+
+helps['synapse link-connection list-link-tables'] = """
+type: command
+short-summary: List the link tables of a link connection.
+examples:
+  - name: List the link tables of a link connection.
+    text: |-
+        az synapse link-connection list-link-tables --workspace-name testsynapseworkspace \\
+          --name linkconnectionname \\
+"""
+
+helps['synapse link-connection edit-link-tables'] = """
+type: command
+short-summary: Edit tables for a link connection.
+examples:
+  - name: Edit tables for a link connection.
+          the file pattern should be
+          {
+            "linkTables":[
+              {
+                "id":"00000000000000000000000000000000", // please change to your link table Id a uuid
+                "source":{
+                  "tableName":"sampleSourceTable", // please change to your source table name
+                  "schemaName":"sampleSourceSchema" // please change to your source database schema name
+                },
+                "target":{
+                  "tableName":"sampleTargetTable", // please change to your target table name
+                  "schemaName":"sampleTargetSchema", // please change to your target database schema name
+                  "distributionOptions":{
+                    "type":"Round_RoBin", // please choose a type from Hash, Round_RoBin, Replicate
+                    "distributionColumn":"sampleColumn" // please change to the column name
+                  }
+                },
+                "operationType":"add" // please choose a value from add, update, remove
+              }
+            ]
+          }
+    text: |-
+        az synapse link-connection edit-link-tables --workspace-name testsynapseworkspace \\
+          --name linkconnectionname \\
+          --file @path/edittablerequestfile.json
+"""
+
+helps['synapse link-connection get-link-tables-status'] = """
+type: command
+short-summary: Query the link table status of a link connection.
+examples:
+  - name: Query the link table status of a link connection.
+    text: |-
+        az synapse link-connection get-link-tables-status --workspace-name testsynapseworkspace \\
+          --name linkconnectionname \\
+          --max-segment-count 50 \\
+          --continuation-token token
+"""
+
+helps['synapse link-connection update-landing-zone-credential'] = """
+type: command
+short-summary: Update landing zone credetial of a link connection.
+examples:
+  - name: Update landing zone credetial of a link connection.
+    text: |-
+        az synapse link-connection update-landing-zone-credential --workspace-name testsynapseworkspace \\
+          --name linkconnectionname \\
+          --sas-token sastoken
 """

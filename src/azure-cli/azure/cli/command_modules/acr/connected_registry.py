@@ -7,6 +7,7 @@ from enum import Enum
 from msrest.exceptions import ValidationError
 from knack.log import get_logger
 from knack.util import CLIError
+from azure.cli.core.azclierror import ArgumentUsageError, InvalidArgumentValueError
 from azure.cli.core.commands import LongRunningOperation
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.util import user_confirmation
@@ -20,6 +21,7 @@ from ._utils import (
     parse_scope_map_actions,
     validate_managed_registry
 )
+from .custom import acr_update_custom
 
 
 class ConnectedRegistryModes(Enum):
@@ -56,21 +58,23 @@ def acr_connected_registry_create(cmd,  # pylint: disable=too-many-locals, too-m
                                   sync_message_ttl=None,
                                   sync_window=None,
                                   log_level=None,
-                                  sync_audit_logs_enabled=False):
+                                  sync_audit_logs_enabled=False,
+                                  notifications=None,
+                                  yes=False):
 
     if bool(sync_token_name) == bool(repositories):
-        raise CLIError("usage error: you must provide either --sync-token-name or --repository, but not both.")
+        raise CLIError("argument error: either --sync-token or --repository must be provided, but not both.")
     # Check needed since the sync token gateway actions must be at least 5 characters long.
     if len(connected_registry_name) < 5:
-        raise CLIError("argument error: Connected registry name must be at least 5 characters long")
-    registry, resource_group_name = get_registry_by_name(cmd.cli_ctx, registry_name, resource_group_name)
+        raise InvalidArgumentValueError("argument error: Connected registry name must be at least 5 characters long.")
     subscription_id = get_subscription_id(cmd.cli_ctx)
+    registry, resource_group_name = get_registry_by_name(cmd.cli_ctx, registry_name, resource_group_name)
 
     if not registry.data_endpoint_enabled:
-        raise CLIError("Can't create the connected registry '{}' ".format(connected_registry_name) +
-                       "because the cloud registry '{}' data endpoint is disabled. ".format(registry_name) +
-                       "Enabling the data endpoint might affect your firewall rules.\nTo enable data endpoint run:" +
-                       "\n\taz acr update -n {} --data-endpoint-enabled true".format(registry_name))
+        user_confirmation("Dedicated data enpoints must be enabled to use connected-registry. Enabling might " +
+                          "impact your firewall rules. Are you sure you want to enable it for '{}' registry?".format(
+                              registry_name), yes)
+        acr_update_custom(cmd, registry, resource_group_name, data_endpoint_enabled=True)
 
     from azure.core.exceptions import HttpResponseError as ErrorResponseException
     parent = None
@@ -104,6 +108,9 @@ def acr_connected_registry_create(cmd,  # pylint: disable=too-many-locals, too-m
             client_token_list[i] = build_token_id(
                 subscription_id, resource_group_name, registry_name, client_token_name)
 
+    notifications_set = set(list(notifications)) \
+        if notifications else set()
+
     ConnectedRegistry, LoggingProperties, SyncProperties, ParentProperties = cmd.get_models(
         'ConnectedRegistry', 'LoggingProperties', 'SyncProperties', 'ParentProperties')
     connected_registry_create_parameters = ConnectedRegistry(
@@ -122,7 +129,8 @@ def acr_connected_registry_create(cmd,  # pylint: disable=too-many-locals, too-m
         logging=LoggingProperties(
             log_level=log_level,
             audit_log_status='Enabled' if sync_audit_logs_enabled else 'Disabled'
-        )
+        ),
+        notifications_list=list(notifications_set) if notifications_set else None
     )
 
     try:
@@ -145,7 +153,9 @@ def acr_connected_registry_update(cmd,  # pylint: disable=too-many-locals, too-m
                                   sync_window=None,
                                   log_level=None,
                                   sync_message_ttl=None,
-                                  sync_audit_logs_enabled=None):
+                                  sync_audit_logs_enabled=None,
+                                  add_notifications=None,
+                                  remove_notifications=None):
     _, resource_group_name = validate_managed_registry(
         cmd, registry_name, resource_group_name)
     subscription_id = get_subscription_id(cmd.cli_ctx)
@@ -181,11 +191,30 @@ def acr_connected_registry_update(cmd,  # pylint: disable=too-many-locals, too-m
 
     client_token_list = list(client_token_set) if client_token_set != current_client_token_set else None
 
+    # Add or remove from the current notifications list
+    add_notifications_set = set(list(add_notifications)) \
+        if add_notifications else set()
+
+    remove_notifications_set = set(list(remove_notifications)) \
+        if remove_notifications else set()
+
+    duplicate_notifications = set.intersection(add_notifications_set, remove_notifications_set)
+    if duplicate_notifications:
+        errors = sorted(duplicate_notifications)
+        raise ArgumentUsageError(
+            'Update ambiguity. Duplicate notifications list were provided with ' +
+            '--add-notifications and --remove-notifications arguments.\n{}'.format(errors))
+
+    current_notifications_set = set(current_connected_registry.notifications_list) \
+        if current_connected_registry.notifications_list else set()
+    notifications_set = current_notifications_set.union(add_notifications_set).difference(remove_notifications_set)
+
+    notifications_list = list(notifications_set) if notifications_set != current_notifications_set else None
+
     ConnectedRegistryUpdateParameters, SyncUpdateProperties, LoggingProperties = cmd.get_models(
         'ConnectedRegistryUpdateParameters', 'SyncUpdateProperties', 'LoggingProperties')
     connected_registry_update_parameters = ConnectedRegistryUpdateParameters(
         sync_properties=SyncUpdateProperties(
-            token_id=current_connected_registry.parent.sync_properties.token_id,
             schedule=sync_schedule,
             message_ttl=sync_message_ttl,
             sync_window=sync_window
@@ -194,7 +223,8 @@ def acr_connected_registry_update(cmd,  # pylint: disable=too-many-locals, too-m
             log_level=log_level,
             audit_log_status=sync_audit_logs_enabled
         ),
-        client_token_ids=client_token_list
+        client_token_ids=client_token_list,
+        notifications_list=notifications_list
     )
 
     try:
@@ -223,7 +253,7 @@ def acr_connected_registry_delete(cmd,
     try:
         connected_registry = acr_connected_registry_show(
             cmd, client, connected_registry_name, registry_name, resource_group_name)
-        result = client.begin_delete(resource_group_name, registry_name, connected_registry_name)
+        result = client.begin_delete(resource_group_name, registry_name, connected_registry_name).result()
         sync_token = get_token_from_id(cmd, connected_registry.parent.sync_properties.token_id)
         sync_token_name = sync_token.name
         sync_scope_map_name = sync_token.scope_map_id.split('/scopeMaps/')[1]
@@ -234,8 +264,10 @@ def acr_connected_registry_delete(cmd,
             scope_map_client = cf_acr_scope_maps(cmd.cli_ctx)
 
             # Delete target sync scope map and token.
-            acr_token_delete(cmd, token_client, registry_name, sync_token_name, yes, resource_group_name)
-            acr_scope_map_delete(cmd, scope_map_client, registry_name, sync_scope_map_name, yes, resource_group_name)
+            acr_token_delete(cmd, token_client, registry_name,
+                             sync_token_name, yes, resource_group_name).result()
+            acr_scope_map_delete(cmd, scope_map_client, registry_name,
+                                 sync_scope_map_name, yes, resource_group_name).result()
             # Cleanup gateway permissions from ancestors
             connected_registry_list = list(client.list(resource_group_name, registry_name))
             family_tree, _ = _get_family_tree(connected_registry_list, None)
@@ -247,7 +279,7 @@ def acr_connected_registry_delete(cmd,
                 "az acr token delete -n {} -r {} --yes\n\t".format(sync_token_name, registry_name) + \
                 "az acr scope-map delete -n {} -r {} --yes\n".format(sync_scope_map_name, registry_name) + \
                 "Run the following command on all ascendency to remove the deleted registry gateway access: \n\t" + \
-                "az acr scope-map update -n <scope-map-name> -r {} --remove-gateway {} --yes".format(
+                "az acr scope-map update -n <scope-map-name> -r {} --remove-gateway {}".format(
                     registry_name, " ".join([connected_registry_name] + DEFAULT_GATEWAY_SCOPE))
             logger.warning(msg)
         return result
@@ -548,12 +580,13 @@ def _update_repo_permissions(cmd,
         actions=current_actions
     )
 
-    return scope_map_client.begin_update(
+    poller = scope_map_client.begin_update(
         resource_group_name,
         registry_name,
         sync_scope_map_name,
         scope_map_update_parameters
     )
+    return LongRunningOperation(cmd.cli_ctx)(poller)
 
 
 def _get_scope_map_actions_set(repos, actions):

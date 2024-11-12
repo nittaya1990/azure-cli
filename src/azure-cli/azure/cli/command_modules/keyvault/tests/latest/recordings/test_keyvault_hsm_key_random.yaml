@@ -13,9 +13,9 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://ystesthsm.managedhsm.azure.net/rng?api-version=7.3-preview
+    uri: https://clitesthsmkey000002.managedhsm.azure.net/rng?api-version=7.5-preview.1
   response:
     body:
       string: ''
@@ -56,12 +56,12 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://ystesthsm.managedhsm.azure.net/rng?api-version=7.3-preview
+    uri: https://clitesthsmkey000002.managedhsm.azure.net/rng?api-version=7.5-preview.1
   response:
     body:
-      string: '{"value":"RFOgBw"}'
+      string: '{"value":"wG-bqQ"}'
     headers:
       cache-control:
       - no-cache
@@ -78,9 +78,9 @@ interactions:
       x-frame-options:
       - SAMEORIGIN
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.233.234;act_addr_fam=Ipv4;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=Ipv4;
       x-ms-keyvault-region:
-      - eastus
+      - uksouth
       x-ms-server-latency:
       - '1'
     status:
@@ -100,12 +100,12 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://ystesthsm.managedhsm.azure.net/rng?api-version=7.3-preview
+    uri: https://clitesthsmkey000002.managedhsm.azure.net/rng?api-version=7.5-preview.1
   response:
     body:
-      string: '{"value":"fw"}'
+      string: '{"value":"qg"}'
     headers:
       cache-control:
       - no-cache
@@ -122,11 +122,11 @@ interactions:
       x-frame-options:
       - SAMEORIGIN
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.233.234;act_addr_fam=Ipv4;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=Ipv4;
       x-ms-keyvault-region:
-      - eastus
+      - uksouth
       x-ms-server-latency:
-      - '1'
+      - '2'
     status:
       code: 200
       message: OK

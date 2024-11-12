@@ -43,10 +43,10 @@ def load_command_table(self, _):
         )
 
     def get_mgmt_factory(name):
-        return getattr(factories, "mgmt_{}_client_factory".format(name))
+        return getattr(factories, f"mgmt_{name}_client_factory")
 
     def get_data_factory(name):
-        return getattr(factories, "{}_client_factory".format(name))
+        return getattr(factories, f"{name}_client_factory")
 
     # Mgmt Account Operations
     with self.command_group('batch account', get_mgmt_type('batch_account'), client_factory=get_mgmt_factory('batch_account')) as g:
@@ -61,6 +61,20 @@ def load_command_table(self, _):
         # g.command('keys renew', 'regenerate_key', table_transformer=account_keys_renew_table_format)
         g.custom_command('keys renew', 'renew_accounts_keys', table_transformer=account_keys_renew_table_format)
         g.command('outbound-endpoints', 'list_outbound_network_dependencies_endpoints')
+
+    with self.command_group('batch account identity', get_mgmt_type('batch_account'), client_factory=get_mgmt_factory('batch_account')) as g:
+        g.custom_command('assign', 'assign_batch_identity')
+        g.custom_command('remove', 'remove_batch_identity', confirmation=True)
+        g.custom_show_command('show', 'show_batch_identity')
+
+    with self.command_group('batch account network-profile', get_mgmt_type('batch_account'), client_factory=get_mgmt_factory('batch_account')) as g:
+        g.custom_show_command('show', 'get_network_profile')
+        g.custom_command('set', 'update_network_profile')
+
+    with self.command_group('batch account network-profile network-rule', get_mgmt_type('batch_account'), client_factory=get_mgmt_factory('batch_account')) as g:
+        g.custom_show_command('list', 'list_network_rules')
+        g.custom_command('add', 'add_network_rule')
+        g.custom_command('delete', 'delete_network_rule', confirmation=True)
 
     with self.command_group('batch application', get_mgmt_type('application'), client_factory=get_mgmt_factory('application')) as g:
         g.command('list', 'list', table_transformer=application_list_table_format)
@@ -83,6 +97,14 @@ def load_command_table(self, _):
     with self.command_group('batch location', get_mgmt_type('location')) as g:
         g.show_command('list-skus', 'list_supported_virtual_machine_skus')
 
+    with self.command_group('batch private-link-resource', get_mgmt_type('private_link_resource'), client_factory=get_mgmt_factory('private_link_resource')) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_batch_account')
+
+    with self.command_group('batch private-endpoint-connection', get_mgmt_type('private_endpoint_connection'), client_factory=get_mgmt_factory('private_endpoint_connection')) as g:
+        g.show_command('show', 'get')
+        g.command('list', 'list_by_batch_account')
+
     # Data Plane Commands
     with self.command_group('batch application summary', get_data_type('application')) as g:
         g.batch_command('list', 'list')
@@ -94,7 +116,7 @@ def load_command_table(self, _):
     with self.command_group('batch pool node-counts', get_data_type('account')) as g:
         g.batch_command('list', 'list_pool_node_counts')
 
-    with self.command_group('batch certificate', get_data_type('certificate'), client_factory=get_data_factory('certificate')) as g:
+    with self.command_group('batch certificate', get_data_type('certificate'), client_factory=get_data_factory('certificate'), deprecate_info=self.deprecate()) as g:
         g.custom_command('create', 'create_certificate')
         g.custom_command('delete', 'delete_certificate', confirmation=True)
         g.batch_command('show', 'get', validator=validate_cert_settings)
@@ -103,7 +125,6 @@ def load_command_table(self, _):
     pool_type = get_data_type('pool')
     with self.command_group('batch pool', pool_type, client_factory=get_data_factory('pool')) as g:
         g.batch_command('usage-metrics list', 'list_usage_metrics')
-        g.batch_command('all-statistics show', 'get_all_lifetime_statistics')
         g.batch_command('create', 'add', validator=validate_pool_settings, flatten=10)
         g.batch_command('list', 'list')
         g.batch_command('delete', 'delete')
@@ -119,7 +140,6 @@ def load_command_table(self, _):
         g.batch_command('delete', 'remove_nodes')
 
     with self.command_group('batch job', get_data_type('job'), client_factory=get_data_factory('job')) as g:
-        g.batch_command('all-statistics show', 'get_all_lifetime_statistics')
         g.batch_command('create', 'add')
         g.batch_command('delete', 'delete')
         g.batch_command('show', 'get')

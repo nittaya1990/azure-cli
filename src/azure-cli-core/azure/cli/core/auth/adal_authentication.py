@@ -4,11 +4,10 @@
 # --------------------------------------------------------------------------------------------
 
 import requests
-from azure.core.credentials import AccessToken
 from knack.log import get_logger
 from msrestazure.azure_active_directory import MSIAuthentication
 
-from .util import _normalize_scopes, scopes_to_resource
+from .util import _normalize_scopes, scopes_to_resource, AccessToken
 
 logger = get_logger(__name__)
 
@@ -17,12 +16,29 @@ class MSIAuthenticationWrapper(MSIAuthentication):
     # This method is exposed for Azure Core. Add *scopes, **kwargs to fit azure.core requirement
     # pylint: disable=line-too-long
     def get_token(self, *scopes, **kwargs):  # pylint:disable=unused-argument
-        logger.debug("MSIAuthenticationWrapper.get_token invoked by Track 2 SDK with scopes=%s", scopes)
+        logger.debug("MSIAuthenticationWrapper.get_token: scopes=%r, kwargs=%r", scopes, kwargs)
 
         if 'data' in kwargs:
-            from azure.cli.core.azclierror import AuthenticationError
-            raise AuthenticationError("VM SSH currently doesn't support managed identity or Cloud Shell.")
+            from azure.cli.core.util import in_cloud_console
+            if in_cloud_console():
+                # Use MSAL to get VM SSH certificate
+                import msal
+                from .util import check_result, build_sdk_access_token
+                from .constants import AZURE_CLI_CLIENT_ID
+                app = msal.PublicClientApplication(
+                    AZURE_CLI_CLIENT_ID,  # Use a real client_id, so that cache would work
+                    # TODO: This PoC does not currently maintain a token cache;
+                    #   Ideally we should reuse the real MSAL app object which has cache configured.
+                    # token_cache=...,
+                )
+                result = app.acquire_token_interactive(list(scopes), prompt="none", data=kwargs["data"])
+                check_result(result, scopes=scopes)
+                return build_sdk_access_token(result)
 
+            from azure.cli.core.azclierror import AuthenticationError
+            raise AuthenticationError("VM SSH currently doesn't support managed identity.")
+
+        # Use msrestazure to get access token
         resource = scopes_to_resource(_normalize_scopes(scopes))
         if resource:
             # If available, use resource provided by SDK
@@ -56,7 +72,7 @@ class MSIAuthenticationWrapper(MSIAuthentication):
         import traceback
         from azure.cli.core.azclierror import AzureConnectionError, AzureResponseError
         try:
-            super(MSIAuthenticationWrapper, self).set_token()
+            super().set_token()
         except requests.exceptions.ConnectionError as err:
             logger.debug('throw requests.exceptions.ConnectionError when doing MSIAuthentication: \n%s',
                          traceback.format_exc())
@@ -82,6 +98,12 @@ class MSIAuthenticationWrapper(MSIAuthentication):
         logger.debug("MSIAuthenticationWrapper.signed_session invoked by Track 1 SDK")
         super().signed_session(session)
 
+    def get_auxiliary_tokens(self, *scopes, **kwargs):  # pylint:disable=no-self-use,unused-argument
+        """This method is added to align with CredentialAdaptor.get_auxiliary_tokens
+        Since managed identity belongs to a single tenant and currently doesn't support cross-tenant authentication,
+        simply return None."""
+        return None
+
 
 def _normalize_expires_on(expires_on):
     """
@@ -93,6 +115,13 @@ def _normalize_expires_on(expires_on):
         expires_on_epoch_int = int(expires_on)
     except ValueError:
         import datetime
+
+        # Python 3.6 doesn't recognize timezone as +00:00.
+        # These lines can be dropped after Python 3.6 is dropped.
+        # https://stackoverflow.com/questions/30999230/how-to-parse-timezone-with-colon
+        if expires_on[-3] == ":":
+            expires_on = expires_on[:-3] + expires_on[-2:]
+
         # Treat as datetime string "11/05/2021 15:18:31 +00:00"
         expires_on_epoch_int = int(datetime.datetime.strptime(expires_on, '%m/%d/%Y %H:%M:%S %z').timestamp())
 

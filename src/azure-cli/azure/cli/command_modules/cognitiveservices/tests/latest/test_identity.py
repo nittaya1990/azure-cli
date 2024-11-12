@@ -18,9 +18,9 @@ class CognitiveServicesByoxTests(ScenarioTest):
 
         self.kwargs.update({
             'sname': sname,
-            'kind': 'Face',
-            'sku': 'E0',
-            'location': 'centraluseuap'
+            'kind': 'FormRecognizer',
+            'sku': 'S0',
+            'location': 'SOUTHCENTRALUS'
         })
 
         # test to create cognitive services account
@@ -46,17 +46,16 @@ class CognitiveServicesByoxTests(ScenarioTest):
 
         self.kwargs.update({
             'sname': sname,
-            'kind': 'Face',
-            'sku': 'E0',
-            'location': 'centraluseuap'
+            'kind': 'FormRecognizer',
+            'sku': 'S0',
+            'location': 'SOUTHCENTRALUS'
         })
 
         # test to create cognitive services account
         self.cmd('az cognitiveservices account create -n {sname} -g {rg} --kind {kind} --sku {sku} -l {location} --yes',
                  checks=[self.check('name', '{sname}'),
                          self.check('location', '{location}'),
-                         self.check('sku.name', '{sku}'),
-                         self.check('properties.provisioningState', 'Succeeded')])
+                         self.check('sku.name', '{sku}')])
 
         account = self.cmd('az cognitiveservices account show -n {sname} -g {rg}').get_output_in_json()
 

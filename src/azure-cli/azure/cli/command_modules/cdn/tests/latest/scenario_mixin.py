@@ -10,7 +10,7 @@ def add_tags(command, tags):
 
 # pylint: disable=too-many-public-methods
 class CdnScenarioMixin:
-    def profile_create_cmd(self, group, name, tags=None, checks=None, options=None, sku=None):
+    def profile_create_cmd(self, group, name, tags=None, checks=None, options=None, sku='STANDARD_MICROSOFT'):
         command = 'cdn profile create -g {} -n {}'.format(group, name)
         if tags:
             command = command + ' --tags {}'.format(tags)
@@ -395,6 +395,10 @@ class CdnScenarioMixin:
         test_dir = path.dirname(path.realpath(__file__))
         default_cert_policy = path.join(test_dir, "byoc_cert_policy.json")
 
+        self.cmd(f'keyvault set-policy --name {key_vault_name} '
+                 f'--secret-permissions get list --certificate-permissions list get '
+                 f'--object-id 4dbab725-22a4-44d5-ad44-c267ca38a954')
+
         return self.cmd(f'keyvault certificate create --vault-name {key_vault_name} '
                         f'-n {cert_name} --policy "@{default_cert_policy}"')
 
@@ -406,3 +410,26 @@ class CdnScenarioMixin:
 
     def resource_id_prefix(self, resource_group):
         return f'/subscriptions/{self.get_subscription_id()}/resourceGroups/{resource_group}/providers/Microsoft.Cdn'
+
+    def cdn_can_migrate_to_afd(self, resource_group, profile_name, checks=None):
+        command = 'cdn profile-migration check-compatibility -g {} --profile-name {}'.format(resource_group,
+                                                                                             profile_name)
+        return self.cmd(command, checks)
+
+    def cdn_migrate_to_afd(self, resource_group, profile_name, sku, migration_endpoint_mappings=None, checks=None):
+        command = 'cdn profile-migration migrate -g {} --profile-name {} --sku {} --identity-type SystemAssigned'.format(resource_group,
+                                                                                                                         profile_name, sku)
+        if migration_endpoint_mappings is not None:
+            command += ' --migration-endpoint-mappings {}'.format(migration_endpoint_mappings)
+
+        return self.cmd(command, checks)
+
+    def cdn_migration_abort(self, resource_group, profile_name, checks=None):
+        command = 'cdn profile-migration abort -g {} --profile-name {}'.format(resource_group,
+                                                                               profile_name)
+        return self.cmd(command, checks)
+
+    def cdn_migration_commit(self, resource_group, profile_name, checks=None):
+        command = 'cdn profile-migration commit -g {} --profile-name {}'.format(resource_group,
+                                                                                profile_name)
+        return self.cmd(command, checks)

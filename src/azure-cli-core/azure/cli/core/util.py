@@ -8,6 +8,7 @@ import base64
 import binascii
 import getpass
 import json
+import yaml
 import logging
 import os
 import platform
@@ -55,17 +56,12 @@ DISALLOWED_USER_NAMES = [
 def handle_exception(ex):  # pylint: disable=too-many-locals, too-many-statements, too-many-branches
     # For error code, follow guidelines at https://docs.python.org/2/library/sys.html#sys.exit,
     from jmespath.exceptions import JMESPathError
-    from msrestazure.azure_exceptions import CloudError
     from msrest.exceptions import HttpOperationError, ValidationError, ClientRequestError
     from azure.common import AzureException
-    from azure.core.exceptions import AzureError
+    from azure.core.exceptions import AzureError, ServiceRequestError, HttpResponseError
     from requests.exceptions import SSLError, HTTPError
     from azure.cli.core import azclierror
-    import traceback
-
-    logger.debug("azure.cli.core.util.handle_exception is called with an exception:")
-    # Print the traceback and exception message
-    logger.debug(traceback.format_exc())
+    from msal_extensions.persistence import PersistenceError
 
     error_msg = getattr(ex, 'message', str(ex))
     exit_code = 1
@@ -78,11 +74,15 @@ def handle_exception(ex):  # pylint: disable=too-many-locals, too-many-statement
         az_error = azclierror.InvalidArgumentValueError(error_msg)
         az_error.set_recommendation(QUERY_REFERENCE)
 
-    elif isinstance(ex, SSLError):
+    # SSLError is raised when making HTTP requests with 'requests' lib behind a proxy that intercepts HTTPS traffic.
+    # - SSLError is raised when directly calling 'requests' lib, such as MSAL or `az rest`
+    # - azure.core.exceptions.ServiceRequestError is raised when indirectly calling 'requests' lib with azure.core,
+    #   which wraps the original SSLError
+    elif isinstance(ex, SSLError) or isinstance(ex, ServiceRequestError) and isinstance(ex.inner_exception, SSLError):
         az_error = azclierror.AzureConnectionError(error_msg)
         az_error.set_recommendation(SSLERROR_TEMPLATE)
 
-    elif isinstance(ex, CloudError):
+    elif isinstance(ex, HttpResponseError):
         if extract_common_error_message(ex):
             error_msg = extract_common_error_message(ex)
         status_code = str(getattr(ex, 'status_code', 'Unknown Code'))
@@ -91,6 +91,14 @@ def handle_exception(ex):  # pylint: disable=too-many-locals, too-many-statement
 
     elif isinstance(ex, ValidationError):
         az_error = azclierror.ValidationError(error_msg)
+
+    elif isinstance(ex, azclierror.HTTPError):
+        # For resources that don't support CAE - 401 can't be handled
+        if ex.response.status_code == 401 and 'WWW-Authenticate' in ex.response.headers:
+            az_error = azclierror.AuthenticationError(ex)
+            az_error.set_recommendation("Interactive authentication is needed. Please run:\naz logout\naz login")
+        else:
+            az_error = azclierror.UnclassifiedUserFault(ex)
 
     elif isinstance(ex, CLIError):
         # TODO: Fine-grained analysis here
@@ -136,11 +144,25 @@ def handle_exception(ex):  # pylint: disable=too-many-locals, too-many-statement
         error_msg = 'Keyboard interrupt is captured.'
         az_error = azclierror.ManualInterrupt(error_msg)
 
+    elif isinstance(ex, PersistenceError):
+        # errno is already in strerror. str(ex) gives duplicated errno.
+        az_error = azclierror.CLIInternalError(ex.strerror)
+        if ex.errno == 0:
+            az_error.set_recommendation(
+                "Please report to us via Github: https://github.com/Azure/azure-cli/issues/20278")
+        elif ex.errno == -2146893813:
+            az_error.set_recommendation(
+                "Please report to us via Github: https://github.com/Azure/azure-cli/issues/20231")
+        elif ex.errno == -2146892987:
+            az_error.set_recommendation(
+                "Please report to us via Github: https://github.com/Azure/azure-cli/issues/21010")
+
     else:
         error_msg = "The command failed with an unexpected error. Here is the traceback:"
         az_error = azclierror.CLIInternalError(error_msg)
         az_error.set_exception_trace(ex)
-        az_error.set_recommendation("To open an issue, please run: 'az feedback'")
+        az_error.set_recommendation(
+            "To check existing issues, please visit: https://github.com/Azure/azure-cli/issues")
 
     if isinstance(az_error, azclierror.ResourceNotFoundError):
         exit_code = 3
@@ -290,7 +312,7 @@ def get_latest_from_github(package_path='azure-cli'):
 
 
 def _update_latest_from_github(versions):
-    if not check_connectivity(max_retries=0):
+    if not check_connectivity(url='https://raw.githubusercontent.com', max_retries=0):
         return versions, False
     success = True
     for pkg in ['azure-cli-core', 'azure-cli-telemetry']:
@@ -380,6 +402,13 @@ def get_az_version_string(use_cache=False):  # pylint: disable=too-many-statemen
             else:
                 _print(ext.name.ljust(20) + (ext.version or 'Unknown').rjust(20))
         _print()
+
+    _print('Dependencies:')
+    dependencies_versions = get_dependency_versions()
+    for k, v in dependencies_versions.items():
+        _print(k.ljust(20) + v.rjust(20))
+    _print()
+
     _print("Python location '{}'".format(os.path.abspath(sys.executable)))
     _print("Extensions directory '{}'".format(EXTENSIONS_DIR))
     if os.path.isdir(EXTENSIONS_SYS_DIR) and os.listdir(EXTENSIONS_SYS_DIR):
@@ -415,6 +444,31 @@ def get_az_version_json():
     return versions
 
 
+def get_dependency_versions():
+    versions = {}
+    # Add msal version
+    try:
+        from msal import __version__ as msal_version
+    except ImportError:
+        msal_version = "N/A"
+    versions['msal'] = msal_version
+
+    # Add azure-mgmt-resource version
+    try:
+        # Track 2 >=15.0.0
+        # pylint: disable=protected-access
+        from azure.mgmt.resource._version import VERSION as azure_mgmt_resource_version
+    except ImportError:
+        try:
+            # Track 1 <=13.0.0
+            from azure.mgmt.resource.version import VERSION as azure_mgmt_resource_version
+        except ImportError:
+            azure_mgmt_resource_version = "N/A"
+    versions['azure-mgmt-resource'] = azure_mgmt_resource_version
+
+    return versions
+
+
 def show_updates_available(new_line_before=False, new_line_after=False):
     from azure.cli.core._session import VERSIONS
     import datetime
@@ -440,9 +494,9 @@ def show_updates(updates_available_components, only_show_when_updates_available=
             logger.warning('Unable to check if your CLI is up-to-date. Check your internet connection.')
     elif updates_available_components:  # pylint: disable=too-many-nested-blocks
         if in_cloud_console():
-            warning_msg = 'You have %i updates available. They will be updated with the next build of Cloud Shell.'
+            warning_msg = 'You have %i update(s) available. They will be updated with the next build of Cloud Shell.'
         else:
-            warning_msg = "You have %i updates available."
+            warning_msg = "You have %i update(s) available."
             if CLI_PACKAGE_NAME in updates_available_components:
                 warning_msg = "{} Consider updating your CLI installation with 'az upgrade'".format(warning_msg)
         logger.warning(warning_msg, len(updates_available_components))
@@ -473,7 +527,20 @@ def get_file_json(file_path, throw_on_empty=True, preserve_order=False):
     try:
         return shell_safe_json_parse(content, preserve_order)
     except CLIError as ex:
-        raise CLIError("Failed to parse {} with exception:\n    {}".format(file_path, ex))
+        # Reading file bypasses shell interpretation, so we discard the recommendation for shell quoting.
+        raise CLIError("Failed to parse file '{}' with exception:\n{}".format(file_path, ex))
+
+
+def get_file_yaml(file_path, throw_on_empty=True):
+    content = read_file_content(file_path)
+    if not content:
+        if throw_on_empty:
+            raise CLIError("Failed to parse file '{}' with exception:\nNo content in the file.".format(file_path))
+        return None
+    try:
+        return yaml.safe_load(content)
+    except yaml.parser.ParserError as ex:
+        raise CLIError("Failed to parse file '{}' with exception:\n{}".format(file_path, ex)) from ex
 
 
 def read_file_content(file_path, allow_binary=False):
@@ -513,13 +580,14 @@ def shell_safe_json_parse(json_or_dict_string, preserve_order=False, strict=True
         except Exception as ex:
             logger.debug(ex)  # log the exception which could be a python dict parsing error.
 
-            # Echo the JSON received by CLI
-            msg = "Failed to parse JSON: {}\nError detail: {}".format(json_or_dict_string, json_ex)
+            # Echo the string received by CLI. Because the user may intend to provide a file path, we don't decisively
+            # say it is a JSON string.
+            msg = "Failed to parse string as JSON:\n{}\nError detail: {}".format(json_or_dict_string, json_ex)
 
             # Recommendation for all shells
             from azure.cli.core.azclierror import InvalidArgumentValueError
-            recommendation = "The JSON may have been parsed by the shell. See " \
-                             "https://docs.microsoft.com/cli/azure/use-cli-effectively#quoting-issues"
+            recommendation = "The provided JSON string may have been parsed by the shell. See " \
+                             "https://docs.microsoft.com/cli/azure/use-cli-effectively#use-quotation-marks-in-arguments"
 
             # Recommendation especially for PowerShell
             parent_proc = get_parent_proc_name()
@@ -586,14 +654,8 @@ def in_cloud_console():
 
 def get_arg_list(op):
     import inspect
-
-    try:
-        # only supported in python3 - falling back to argspec if not available
-        sig = inspect.signature(op)
-        return sig.parameters
-    except AttributeError:
-        sig = inspect.getargspec(op)  # pylint: disable=deprecated-method
-        return sig.args
+    sig = inspect.signature(op)
+    return sig.parameters
 
 
 def is_track2(client_class):
@@ -613,10 +675,10 @@ def should_disable_connection_verify():
 
 
 def poller_classes():
-    from msrestazure.azure_operation import AzureOperationPoller
     from msrest.polling.poller import LROPoller
     from azure.core.polling import LROPoller as AzureCoreLROPoller
-    return (AzureOperationPoller, LROPoller, AzureCoreLROPoller)
+    from azure.cli.core.aaz._poller import AAZLROPoller
+    return (LROPoller, AzureCoreLROPoller, AAZLROPoller)
 
 
 def augment_no_wait_handler_args(no_wait_enabled, handler, handler_args):
@@ -688,6 +750,11 @@ def is_wsl():
 def is_windows():
     platform_name, _ = _get_platform_info()
     return platform_name == 'windows'
+
+
+def is_github_codespaces():
+    # https://docs.github.com/en/codespaces/developing-in-a-codespace/default-environment-variables-for-your-codespace
+    return os.environ.get('CODESPACES') == 'true'
 
 
 def can_launch_browser():
@@ -834,13 +901,21 @@ def send_raw_request(cli_ctx, method, url, headers=None, uri_parameters=None,  #
         agents.append(headers['User-Agent'])
     headers['User-Agent'] = ' '.join(agents)
 
+    from azure.cli.core.telemetry import set_user_agent
+    set_user_agent(headers['User-Agent'])
+
     if generated_client_request_id_name:
         headers[generated_client_request_id_name] = str(uuid.uuid4())
 
     # try to figure out the correct content type
     if body:
         try:
-            _ = shell_safe_json_parse(body)
+            body_object = shell_safe_json_parse(body)
+            # Make sure Unicode characters are escaped as ASCII by utilizing the default ensure_ascii=True kwarg
+            # of json.dumps, since http.client by default encodes the body as latin-1:
+            # https://github.com/python/cpython/blob/3.10/Lib/http/client.py#L164
+            # https://github.com/python/cpython/blob/3.10/Lib/http/client.py#L1324-L1327
+            body = json.dumps(body_object)
             if 'Content-Type' not in headers:
                 headers['Content-Type'] = 'application/json'
         except Exception:  # pylint: disable=broad-except
@@ -931,7 +1006,8 @@ def send_raw_request(cli_ctx, method, url, headers=None, uri_parameters=None,  #
         reason = r.reason
         if r.text:
             reason += '({})'.format(r.text)
-        raise CLIError(reason)
+        from .azclierror import HTTPError
+        raise HTTPError(reason, r)
     if output_file:
         with open(output_file, 'wb') as fd:
             for chunk in r.iter_content(chunk_size=128):
@@ -1247,6 +1323,10 @@ def rmtree_with_retry(path):
             import shutil
             shutil.rmtree(path)
             return
+        except FileNotFoundError:
+            # The folder has already been deleted. No further retry is needed.
+            # errno: 2, winerror: 3, strerror: 'The system cannot find the path specified'
+            return
         except OSError as err:
             if retry_num > 0:
                 logger.warning("Failed to delete '%s': %s. Retrying ...", path, err)
@@ -1255,3 +1335,60 @@ def rmtree_with_retry(path):
             else:
                 logger.warning("Failed to delete '%s': %s. You may try to delete it manually.", path, err)
                 break
+
+
+def get_secret_store(cli_ctx, name):
+    """Create a process-concurrency-safe azure.cli.core.auth.persistence.SecretStore instance that can be used to
+    save secret data.
+    """
+    from azure.cli.core._environment import get_config_dir
+    from azure.cli.core.auth.persistence import load_secret_store
+    # Save to CLI's config dir, by default ~/.azure
+    location = os.path.join(get_config_dir(), name)
+    # We honor the system type (Windows, Linux, or MacOS) and global config
+    encrypt = should_encrypt_token_cache(cli_ctx)
+    return load_secret_store(location, encrypt)
+
+
+def should_encrypt_token_cache(cli_ctx):
+    # Only enable encryption for Windows (for now).
+    fallback = sys.platform.startswith('win32')
+
+    # EXPERIMENTAL: Use core.encrypt_token_cache=False to turn off token cache encryption.
+    # encrypt_token_cache affects both MSAL token cache and service principal entries.
+    encrypt = cli_ctx.config.getboolean('core', 'encrypt_token_cache', fallback=fallback)
+
+    return encrypt
+
+
+def run_cmd(args, *, capture_output=False, timeout=None, check=False, encoding=None, env=None):
+    """Run command in a subprocess. It reduces (not eliminates) shell injection by forcing args to be a list
+    and shell=False. Other arguments are keyword-only. For their documentation, see
+    https://docs.python.org/3/library/subprocess.html#subprocess.run
+    """
+    if not isinstance(args, list):
+        from azure.cli.core.azclierror import ArgumentUsageError
+        raise ArgumentUsageError("Invalid args. run_cmd args must be a list")
+
+    import subprocess
+    return subprocess.run(args, capture_output=capture_output, timeout=timeout, check=check,
+                          encoding=encoding, env=env)
+
+
+def run_az_cmd(args, out_file=None):
+    """
+    run_az_cmd would run az related cmds during command execution
+    :param args: cmd to be executed, array of string, like `["az", "version"]`, "az" is optional
+    :param out_file: The file to send output to. file-like object
+    :return: cmd execution result object, containing `result`, `error`, `exit_code`
+    """
+    from azure.cli.core.azclierror import ArgumentUsageError
+    if not isinstance(args, list):
+        raise ArgumentUsageError("Invalid args. run_az_cmd args must be a list")
+    if args[0] == "az":
+        args = args[1:]
+
+    from azure.cli.core import get_default_cli
+    cli = get_default_cli()
+    cli.invoke(args, out_file=out_file)
+    return cli.result

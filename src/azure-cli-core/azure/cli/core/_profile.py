@@ -5,14 +5,13 @@
 
 import os
 import os.path
-import sys
 from copy import deepcopy
 from enum import Enum
 
 from azure.cli.core._session import ACCOUNT
 from azure.cli.core.azclierror import AuthenticationError
 from azure.cli.core.cloud import get_active_cloud, set_cloud_subscription
-from azure.cli.core.util import in_cloud_console, can_launch_browser
+from azure.cli.core.util import in_cloud_console, can_launch_browser, is_github_codespaces
 from knack.log import get_logger
 from knack.util import CLIError
 
@@ -25,10 +24,17 @@ logger = get_logger(__name__)
 _IS_DEFAULT_SUBSCRIPTION = 'isDefault'
 _SUBSCRIPTION_ID = 'id'
 _SUBSCRIPTION_NAME = 'name'
+
 # Tenant of the token which is used to list the subscription
 _TENANT_ID = 'tenantId'
-# Home tenant of the subscription, which maps to tenantId in 'Subscriptions - List REST API'
-# https://docs.microsoft.com/en-us/rest/api/resources/subscriptions/list
+
+# More information on the token tenant. Maps to properties in 'Tenants - List' REST API
+# https://learn.microsoft.com/en-us/rest/api/resources/tenants/list
+_TENANT_DEFAULT_DOMAIN = 'tenantDefaultDomain'  # defaultDomain
+_TENANT_DISPLAY_NAME = 'tenantDisplayName'  # displayName
+
+# Home tenant of the subscription. Maps to tenantId in 'Subscriptions - List' REST API
+# https://learn.microsoft.com/en-us/rest/api/resources/subscriptions/list
 _HOME_TENANT_ID = 'homeTenantId'
 _MANAGED_BY_TENANTS = 'managedByTenants'
 _USER_ENTITY = 'user'
@@ -92,17 +98,27 @@ def _get_cloud_console_token_endpoint():
     return os.environ.get('MSI_ENDPOINT')
 
 
-def _attach_token_tenant(subscription, tenant):
-    """Attach the token tenant ID to the subscription as tenant_id, so that CLI knows which token should be used
+def _attach_token_tenant(subscription, tenant, tenant_id_description=None):
+    """Attach the token tenant information to the subscription. CLI uses tenant_id to know which token should be used
     to access the subscription.
 
     This function supports multiple APIs:
-      - v2016_06_01's Subscription doesn't have tenant_id
-      - v2019_11_01's Subscription has tenant_id representing the home tenant ID. It will mapped to home_tenant_id
+      - v2016_06_01: Subscription doesn't have tenant_id
+      - v2022_12_01:
+        - Subscription has tenant_id representing the home tenant ID, mapped to home_tenant_id
+        - TenantIdDescription has default_domain, mapped to tenant_default_domain
+        - TenantIdDescription has display_name, mapped to tenant_display_name
     """
     if hasattr(subscription, "tenant_id"):
         setattr(subscription, 'home_tenant_id', subscription.tenant_id)
     setattr(subscription, 'tenant_id', tenant)
+
+    # Attach tenant_default_domain, if available
+    if tenant_id_description and hasattr(tenant_id_description, "default_domain"):
+        setattr(subscription, 'tenant_default_domain', tenant_id_description.default_domain)
+    # Attach display_name, if available
+    if tenant_id_description and hasattr(tenant_id_description, "display_name"):
+        setattr(subscription, 'tenant_display_name', tenant_id_description.display_name)
 
 
 # pylint: disable=too-many-lines,too-many-instance-attributes,unused-argument
@@ -134,6 +150,7 @@ class Profile:
               use_device_code=False,
               allow_no_subscriptions=False,
               use_cert_sn_issuer=None,
+              show_progress=False,
               **kwargs):
         """
         For service principal, `password` is a dict returned by ServicePrincipalAuth.build_credential
@@ -149,6 +166,10 @@ class Profile:
                 logger.info('No web browser is available. Fall back to device code.')
                 use_device_code = True
 
+            if not use_device_code and is_github_codespaces():
+                logger.info('GitHub Codespaces is detected. Fall back to device code.')
+                use_device_code = True
+
             if use_device_code:
                 user_identity = identity.login_with_device_code(scopes=scopes, **kwargs)
             else:
@@ -160,6 +181,11 @@ class Profile:
                 identity.login_with_service_principal(username, password, scopes=scopes)
 
         # We have finished login. Let's find all subscriptions.
+        if show_progress:
+            message = ('Retrieving subscriptions for the selection...' if tenant else
+                       'Retrieving tenants and subscriptions for the selection...')
+            print(f"\n{message}")
+
         if user_identity:
             username = user_identity['username']
 
@@ -194,8 +220,12 @@ class Profile:
         return deepcopy(consolidated)
 
     def login_with_managed_identity(self, identity_id=None, allow_no_subscriptions=None):
+        if _on_azure_arc_windows():
+            return self.login_with_managed_identity_azure_arc_windows(
+                identity_id=identity_id, allow_no_subscriptions=allow_no_subscriptions)
+
         import jwt
-        from msrestazure.tools import is_valid_resource_id
+        from azure.mgmt.core.tools import is_valid_resource_id
         from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
         resource = self.cli_ctx.cloud.endpoints.active_directory_resource_id
 
@@ -256,19 +286,45 @@ class Profile:
         self._set_subscriptions(consolidated)
         return deepcopy(consolidated)
 
-    def login_in_cloud_shell(self):
+    def login_with_managed_identity_azure_arc_windows(self, identity_id=None, allow_no_subscriptions=None):
         import jwt
-        from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
+        identity_type = MsiAccountTypes.system_assigned
+        from .auth.msal_credentials import ManagedIdentityCredential
 
-        msi_creds = MSIAuthenticationWrapper(resource=self.cli_ctx.cloud.endpoints.active_directory_resource_id)
-        token_entry = msi_creds.token
-        token = token_entry['access_token']
-        logger.info('MSI: token was retrieved. Now trying to initialize local accounts...')
+        cred = ManagedIdentityCredential()
+        token = cred.get_token(*self._arm_scope).token
+        logger.info('Managed identity: token was retrieved. Now trying to initialize local accounts...')
         decode = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
         tenant = decode['tid']
 
         subscription_finder = SubscriptionFinder(self.cli_ctx)
-        subscriptions = subscription_finder.find_using_specific_tenant(tenant, msi_creds)
+        subscriptions = subscription_finder.find_using_specific_tenant(tenant, cred)
+        base_name = ('{}-{}'.format(identity_type, identity_id) if identity_id else identity_type)
+        user = _USER_ASSIGNED_IDENTITY if identity_id else _SYSTEM_ASSIGNED_IDENTITY
+        if not subscriptions:
+            if allow_no_subscriptions:
+                subscriptions = self._build_tenant_level_accounts([tenant])
+            else:
+                raise CLIError('No access was configured for the managed identity, hence no subscriptions were found. '
+                               "If this is expected, use '--allow-no-subscriptions' to have tenant level access.")
+
+        consolidated = self._normalize_properties(user, subscriptions, is_service_principal=True,
+                                                  user_assigned_identity_id=base_name)
+        self._set_subscriptions(consolidated)
+        return deepcopy(consolidated)
+
+    def login_in_cloud_shell(self):
+        import jwt
+        from .auth.msal_credentials import CloudShellCredential
+
+        cred = CloudShellCredential()
+        token = cred.get_token(*self._arm_scope).token
+        logger.info('Cloud Shell token was retrieved. Now trying to initialize local accounts...')
+        decode = jwt.decode(token, algorithms=['RS256'], options={"verify_signature": False})
+        tenant = decode['tid']
+
+        subscription_finder = SubscriptionFinder(self.cli_ctx)
+        subscriptions = subscription_finder.find_using_specific_tenant(tenant, cred)
         if not subscriptions:
             raise CLIError('No subscriptions were found in the cloud shell')
         user = decode.get('unique_name', 'N/A')
@@ -280,15 +336,24 @@ class Profile:
         return deepcopy(consolidated)
 
     def logout(self, user_or_sp):
+        # The order of below steps matter! We must
+        #   1. Remove the account from MSAL token cache and SP store
+        #   2. Remove the account from CLI profile
+        # This way, if step 1 fails, CLI still keeps track of the account. Otherwise, if we do the
+        # reverse and step 1 fails, CLI will lose track of the account.
+
+        # Step 1: Remove the account from MSAL token cache and SP store (SP only)
+        # We can't distinguish whether user_or_sp is a user or SP, so try both
+        identity = _create_identity_instance(self.cli_ctx, self._authority)
+        identity.logout_user(user_or_sp)
+        identity.logout_service_principal(user_or_sp)
+
+        # Step 2: Remove the account from CLI profile
         subscriptions = self.load_cached_subscriptions(all_clouds=True)
         result = [x for x in subscriptions
                   if user_or_sp.lower() == x[_USER_ENTITY][_USER_NAME].lower()]
         subscriptions = [x for x in subscriptions if x not in result]
         self._storage[_SUBSCRIPTIONS] = subscriptions
-
-        identity = _create_identity_instance(self.cli_ctx, self._authority)
-        identity.logout_user(user_or_sp)
-        identity.logout_service_principal(user_or_sp)
 
     def logout_all(self):
         self._storage[_SUBSCRIPTIONS] = []
@@ -316,11 +381,24 @@ class Profile:
 
         managed_identity_type, managed_identity_id = Profile._try_parse_msi_account_name(account)
 
-        # Cloud Shell is just a system assignment managed identity
         if in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
-            managed_identity_type = MsiAccountTypes.system_assigned
+            # Cloud Shell
+            from .auth.msal_credentials import CloudShellCredential
+            from azure.cli.core.auth.credential_adaptor import CredentialAdaptor
+            # The credential must be wrapped by CredentialAdaptor so that it can work with Track 1 SDKs.
+            cred = CredentialAdaptor(CloudShellCredential(), resource=resource)
 
-        if managed_identity_type is None:
+        elif managed_identity_type:
+            # managed identity
+            if _on_azure_arc_windows():
+                from .auth.msal_credentials import ManagedIdentityCredential
+                from azure.cli.core.auth.credential_adaptor import CredentialAdaptor
+                # The credential must be wrapped by CredentialAdaptor so that it can work with Track 1 SDKs.
+                cred = CredentialAdaptor(ManagedIdentityCredential(), resource=resource)
+            else:
+                cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
+
+        else:
             # user and service principal
             external_tenants = []
             if aux_tenants:
@@ -340,9 +418,7 @@ class Profile:
             cred = CredentialAdaptor(credential,
                                      auxiliary_credentials=external_credentials,
                                      resource=resource)
-        else:
-            # managed identity
-            cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id, resource)
+
         return (cred,
                 str(account[_SUBSCRIPTION_ID]),
                 str(account[_TENANT_ID]))
@@ -361,39 +437,48 @@ class Profile:
             raise CLIError("Please specify only one of subscription and tenant, not both")
 
         account = self.get_subscription(subscription)
-        resource = resource or self.cli_ctx.cloud.endpoints.active_directory_resource_id
 
-        identity_type, identity_id = Profile._try_parse_msi_account_name(account)
-        if identity_type:
-            # MSI
-            if tenant:
-                raise CLIError("Tenant shouldn't be specified for MSI account")
-            msi_creds = MsiAccountTypes.msi_auth_factory(identity_type, identity_id, resource)
-            msi_creds.set_token()
-            token_entry = msi_creds.token
-            creds = (token_entry['token_type'], token_entry['access_token'], token_entry)
-        elif in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
+        managed_identity_type, managed_identity_id = Profile._try_parse_msi_account_name(account)
+
+        if in_cloud_console() and account[_USER_ENTITY].get(_CLOUD_SHELL_ID):
             # Cloud Shell
             if tenant:
                 raise CLIError("Tenant shouldn't be specified for Cloud Shell account")
-            creds = self._get_token_from_cloud_shell(resource)
+            from .auth.msal_credentials import CloudShellCredential
+            cred = CloudShellCredential()
+
+        elif managed_identity_type:
+            # managed identity
+            if tenant:
+                raise CLIError("Tenant shouldn't be specified for managed identity account")
+            if _on_azure_arc_windows():
+                from .auth.msal_credentials import ManagedIdentityCredential
+                cred = ManagedIdentityCredential()
+            else:
+                from .auth.util import scopes_to_resource
+                cred = MsiAccountTypes.msi_auth_factory(managed_identity_type, managed_identity_id,
+                                                        scopes_to_resource(scopes))
+
         else:
-            credential = self._create_credential(account, tenant)
-            token = credential.get_token(*scopes)
+            cred = self._create_credential(account, tenant)
 
-            import datetime
-            expiresOn = datetime.datetime.fromtimestamp(token.expires_on).strftime("%Y-%m-%d %H:%M:%S.%f")
+        sdk_token = cred.get_token(*scopes)
+        # Convert epoch int 'expires_on' to datetime string 'expiresOn' for backward compatibility
+        # WARNING: expiresOn is deprecated and will be removed in future release.
+        import datetime
+        expiresOn = datetime.datetime.fromtimestamp(sdk_token.expires_on).strftime("%Y-%m-%d %H:%M:%S.%f")
 
-            token_entry = {
-                'accessToken': token.token,
-                'expires_on': token.expires_on,
-                'expiresOn': expiresOn
-            }
+        token_entry = {
+            'accessToken': sdk_token.token,
+            'expires_on': sdk_token.expires_on,  # epoch int, like 1605238724
+            'expiresOn': expiresOn  # datetime string, like "2020-11-12 13:50:47.114324"
+        }
 
-            # (tokenType, accessToken, tokenEntry)
-            creds = 'Bearer', token.token, token_entry
-        # (cred, subscription, tenant)
-        return (creds,
+        # Build a tuple of (token_type, token, token_entry)
+        token_tuple = 'Bearer', sdk_token.token, token_entry
+
+        # Return a tuple of (token_tuple, subscription, tenant)
+        return (token_tuple,
                 None if tenant else str(account[_SUBSCRIPTION_ID]),
                 str(tenant if tenant else account[_TENANT_ID]))
 
@@ -628,7 +713,7 @@ class Profile:
                 if not subscriptions:
                     continue
 
-            consolidated = self._normalize_properties(subscription_finder.user_id,
+            consolidated = self._normalize_properties(user_name,
                                                       subscriptions,
                                                       is_service_principal)
             result += consolidated
@@ -636,40 +721,21 @@ class Profile:
         self._set_subscriptions(result, merge=False)
 
     def get_sp_auth_info(self, subscription_id=None, name=None, password=None, cert_file=None):
-        """Generate a JSON for --sdk-auth argument when used in:
-            - az ad sp create-for-rbac --sdk-auth
-            - az account show --sdk-auth
+        """Generate a JSON for --json-auth argument when used in:
+            - az ad sp create-for-rbac --json-auth
         """
         from collections import OrderedDict
         account = self.get_subscription(subscription_id)
 
         # is the credential created through command like 'create-for-rbac'?
         result = OrderedDict()
-        if name and (password or cert_file):
-            result['clientId'] = name
-            if password:
-                result['clientSecret'] = password
-            else:
-                result['clientCertificate'] = cert_file
-            result['subscriptionId'] = subscription_id or account[_SUBSCRIPTION_ID]
-        else:  # has logged in through cli
-            user_type = account[_USER_ENTITY].get(_USER_TYPE)
-            if user_type == _SERVICE_PRINCIPAL:
-                client_id = account[_USER_ENTITY][_USER_NAME]
-                result['clientId'] = client_id
-                identity = _create_identity_instance(self.cli_ctx, self._authority, tenant_id=account[_TENANT_ID])
-                sp_entry = identity.get_service_principal_entry(client_id)
 
-                from .auth.msal_authentication import _CLIENT_SECRET, _CERTIFICATE
-                secret = sp_entry.get(_CLIENT_SECRET)
-                if secret:
-                    result['clientSecret'] = secret
-                else:
-                    # we can output 'clientCertificateThumbprint' if asked
-                    result['clientCertificate'] = sp_entry.get(_CERTIFICATE)
-                result['subscriptionId'] = account[_SUBSCRIPTION_ID]
-            else:
-                raise CLIError('SDK Auth file is only applicable when authenticated using a service principal')
+        result['clientId'] = name
+        if password:
+            result['clientSecret'] = password
+        else:
+            result['clientCertificate'] = cert_file
+        result['subscriptionId'] = subscription_id or account[_SUBSCRIPTION_ID]
 
         result[_TENANT_ID] = account[_TENANT_ID]
         endpoint_mappings = OrderedDict()  # use OrderedDict to control the output sequence
@@ -690,17 +756,21 @@ class Profile:
     def get_installation_id(self):
         installation_id = self._storage.get(_INSTALLATION_ID)
         if not installation_id:
-            import uuid
-            installation_id = str(uuid.uuid1())
+            try:
+                # We share the same installationId with Azure Powershell. So try to load installationId from PSH file
+                # Contact: DEV@Nanxiang Liu, PM@Damien Caro
+                shared_installation_id_file = os.path.join(self.cli_ctx.config.config_dir,
+                                                           'AzureRmContextSettings.json')
+                with open(shared_installation_id_file, 'r', encoding='utf-8-sig') as f:
+                    import json
+                    content = json.load(f)
+                    installation_id = content['Settings']['InstallationId']
+            except Exception as ex:  # pylint: disable=broad-except
+                logger.debug('Failed to load installationId from AzureRmSurvey.json. %s', str(ex))
+                import uuid
+                installation_id = str(uuid.uuid1())
             self._storage[_INSTALLATION_ID] = installation_id
         return installation_id
-
-    def _get_token_from_cloud_shell(self, resource):  # pylint: disable=no-self-use
-        from azure.cli.core.auth.adal_authentication import MSIAuthenticationWrapper
-        auth = MSIAuthenticationWrapper(resource=resource)
-        auth.set_token()
-        token_entry = auth.token
-        return (token_entry['token_type'], token_entry['access_token'], token_entry)
 
 
 class MsiAccountTypes:
@@ -733,8 +803,6 @@ class SubscriptionFinder:
     # An ARM client. It finds subscriptions for a user or service principal. It shouldn't do any
     # authentication work, but only find subscriptions
     def __init__(self, cli_ctx):
-
-        self.user_id = None  # will figure out after log user in
         self.cli_ctx = cli_ctx
         self.secret = None
         self._arm_resource_id = cli_ctx.cloud.endpoints.active_directory_resource_id
@@ -745,9 +813,10 @@ class SubscriptionFinder:
         # pylint: disable=too-many-statements
         all_subscriptions = []
         empty_tenants = []
-        mfa_tenants = []
+        interaction_required_tenants = []
 
         client = self._create_subscription_client(credential)
+        # https://learn.microsoft.com/en-us/rest/api/resources/tenants/list
         tenants = client.tenants.list()
 
         for t in tenants:
@@ -769,17 +838,16 @@ class SubscriptionFinder:
             specific_tenant_credential = identity.get_user_credential(username)
 
             try:
-                subscriptions = self.find_using_specific_tenant(tenant_id, specific_tenant_credential)
+
+                subscriptions = self.find_using_specific_tenant(tenant_id, specific_tenant_credential,
+                                                                tenant_id_description=t)
             except AuthenticationError as ex:
-                # because user creds went through the 'common' tenant, the error here must be
-                # tenant specific, like the account was disabled. For such errors, we will continue
-                # with other tenants.
-                msg = ex.error_msg
-                if 'AADSTS50076' in msg:
-                    # The tenant requires MFA and can't be accessed with home tenant's refresh token
-                    mfa_tenants.append(t)
-                else:
-                    logger.warning("Failed to authenticate '%s' due to error '%s'", t, ex)
+                # because user creds went through the 'organizations' tenant, the error here must be
+                # tenant specific, like the account was disabled, being blocked by MFA. For such errors,
+                # we continue with other tenants.
+                # As we don't check AADSTS error code, show the original error message for user's reference.
+                logger.warning("Authentication failed against tenant %s: %s", t.tenant_id_name, ex)
+                interaction_required_tenants.append(t)
                 continue
 
             if not subscriptions:
@@ -803,24 +871,29 @@ class SubscriptionFinder:
         # Show warning for empty tenants
         if empty_tenants:
             logger.warning("The following tenants don't contain accessible subscriptions. "
-                           "Use 'az login --allow-no-subscriptions' to have tenant level access.")
+                           "Use `az login --allow-no-subscriptions` to have tenant level access.")
             for t in empty_tenants:
                 logger.warning("%s", t.tenant_id_name)
 
-        # Show warning for MFA tenants
-        if mfa_tenants:
-            logger.warning("The following tenants require Multi-Factor Authentication (MFA). "
-                           "Use 'az login --tenant TENANT_ID' to explicitly login to a tenant.")
-            for t in mfa_tenants:
+        # Show warning for InteractionRequired tenants
+        if interaction_required_tenants:
+            logger.warning("If you need to access subscriptions in the following tenants, please use "
+                           "`az login --tenant TENANT_ID`.")
+            for t in interaction_required_tenants:
                 logger.warning("%s", t.tenant_id_name)
         return all_subscriptions
 
-    def find_using_specific_tenant(self, tenant, credential):
+    def find_using_specific_tenant(self, tenant, credential, tenant_id_description=None):
+        """List subscriptions that can be accessed from a specific tenant.
+        If called from find_using_common_tenant, tenant_id_description is TenantIdDescription retrieved from
+        'Tenants - List' REST API. If directly called, tenant_id_description is None.
+        """
         client = self._create_subscription_client(credential)
+        # https://learn.microsoft.com/en-us/rest/api/resources/subscriptions/list
         subscriptions = client.subscriptions.list()
         all_subscriptions = []
         for s in subscriptions:
-            _attach_token_tenant(s, tenant)
+            _attach_token_tenant(s, tenant, tenant_id_description=tenant_id_description)
             all_subscriptions.append(s)
         self.tenants.append(tenant)
         return all_subscriptions
@@ -853,6 +926,11 @@ def _transform_subscription_for_multiapi(s, s_dict):
     """
     if hasattr(s, 'home_tenant_id'):
         s_dict[_HOME_TENANT_ID] = s.home_tenant_id
+    if hasattr(s, 'tenant_default_domain'):
+        s_dict[_TENANT_DEFAULT_DOMAIN] = s.tenant_default_domain
+    if hasattr(s, 'tenant_display_name'):
+        s_dict[_TENANT_DISPLAY_NAME] = s.tenant_display_name
+
     if hasattr(s, 'managed_by_tenants'):
         if s.managed_by_tenants is None:
             s_dict[_MANAGED_BY_TENANTS] = None
@@ -863,9 +941,25 @@ def _transform_subscription_for_multiapi(s, s_dict):
 def _create_identity_instance(cli_ctx, *args, **kwargs):
     """Lazily import and create Identity instance to avoid unnecessary imports."""
     from .auth.identity import Identity
+    from .util import should_encrypt_token_cache
+    encrypt = should_encrypt_token_cache(cli_ctx)
 
-    # Only enable encryption for Windows (for now).
-    fallback = sys.platform.startswith('win32')
-    encrypt = cli_ctx.config.getboolean('core', 'token_encryption', fallback=fallback)
+    # EXPERIMENTAL: Use core.use_msal_http_cache=False to turn off MSAL HTTP cache.
+    use_msal_http_cache = cli_ctx.config.getboolean('core', 'use_msal_http_cache', fallback=True)
 
-    return Identity(*args, encrypt=encrypt, **kwargs)
+    # On Windows, use core.enable_broker_on_windows=false to disable broker (WAM) for authentication.
+    enable_broker_on_windows = cli_ctx.config.getboolean('core', 'enable_broker_on_windows', fallback=True)
+    from .telemetry import set_broker_info
+    set_broker_info(enable_broker_on_windows)
+
+    # PREVIEW: In Azure Stack environment, use core.instance_discovery=false to disable MSAL's instance discovery.
+    instance_discovery = cli_ctx.config.getboolean('core', 'instance_discovery', True)
+
+    return Identity(*args, encrypt=encrypt, use_msal_http_cache=use_msal_http_cache,
+                    enable_broker_on_windows=enable_broker_on_windows,
+                    instance_discovery=instance_discovery, **kwargs)
+
+
+def _on_azure_arc_windows():
+    # This indicates an Azure Arc-enabled Windows server
+    return "IDENTITY_ENDPOINT" in os.environ and "IMDS_ENDPOINT" in os.environ

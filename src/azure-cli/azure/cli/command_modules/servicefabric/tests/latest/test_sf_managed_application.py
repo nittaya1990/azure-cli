@@ -22,9 +22,9 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
             'vm_password': self.create_random_name('Pass@', 9),
             'app_type_name': 'VotingType',
             'v1': '1.0.0',
-            'app_package_v1': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.sfpkg',
+            'app_package_v1': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.sfpkg?sp=r&st=2024-03-11T19:56:24Z&se=2024-04-07T03:56:24Z&sv=2022-11-02&sr=b&sig=hi56byw0jYpSLnJtMNemqHe92cZTMJgMHyeGa7GtN9E%3D',
             'v2': '2.0.0',
-            'app_package_v2': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.2.0.0.sfpkg',
+            'app_package_v2': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.2.0.0.sfpkg?sp=r&st=2024-03-11T19:57:12Z&se=2024-04-07T03:57:12Z&sv=2022-11-02&sr=b&sig=gHhkx%2Fvd3ddWG5Nr%2FfZM8yuUqmlrL67j%2BZ3rxLLVf1k%3D',
             'app_name': self.create_random_name('testApp', 11),
             'stateful_service_type': 'VotingDataType',
             'stateless_service_type': 'VotingWebType',
@@ -55,7 +55,7 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
         self.cmd('az sf managed-application-type delete -g {rg} -c {cluster_name} --application-type-name {app_type_name}')
 
         # SystemExit 3 'not found'
-        with self.assertRaisesRegexp(SystemExit, '3'):
+        with self.assertRaisesRegex(SystemExit, '3'):
             self.cmd('az sf managed-application-type show -g {rg} -c {cluster_name} --application-type-name {app_type_name}')
 
     @ResourceGroupPreparer()
@@ -67,9 +67,9 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
             'vm_password': self.create_random_name('Pass@', 9),
             'app_type_name': 'VotingType',
             'v1': '1.0.0',
-            'app_package_v1': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.sfpkg',
+            'app_package_v1': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.sfpkg?sp=r&st=2024-03-11T19:56:24Z&se=2024-04-07T03:56:24Z&sv=2022-11-02&sr=b&sig=hi56byw0jYpSLnJtMNemqHe92cZTMJgMHyeGa7GtN9E%3D',
             'v2': '2.0.0',
-            'app_package_v2': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.2.0.0.sfpkg',
+            'app_package_v2': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.2.0.0.sfpkg?sp=r&st=2024-03-11T19:57:12Z&se=2024-04-07T03:57:12Z&sv=2022-11-02&sr=b&sig=gHhkx%2Fvd3ddWG5Nr%2FfZM8yuUqmlrL67j%2BZ3rxLLVf1k%3D',
             'app_name': self.create_random_name('testApp', 11),
             'stateful_service_type': 'VotingDataType',
             'stateless_service_type': 'VotingWebType',
@@ -82,7 +82,7 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
         _wait_for_managed_cluster_state_ready(self, self.kwargs)
 
         # 'not found'
-        with self.assertRaisesRegexp(Exception, r'\(NotFound\).+not found.'):
+        with self.assertRaisesRegex(Exception, r'\(NotFound\).+not found.'):
             self.cmd('az sf managed-application-type version list -g {rg} -c {cluster_name} --application-type-name {app_type_name}')
         # Create
         app_type_version = self.cmd('az sf managed-application-type version create -g {rg} -c {cluster_name} '
@@ -114,9 +114,9 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
             'vm_password': self.create_random_name('Pass@', 9),
             'app_type_name': 'VotingType',
             'v1': '1.0.0',
-            'app_package_v1': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.sfpkg',
+            'app_package_v1': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.sfpkg?sp=r&st=2024-03-11T19:56:24Z&se=2024-04-07T03:56:24Z&sv=2022-11-02&sr=b&sig=hi56byw0jYpSLnJtMNemqHe92cZTMJgMHyeGa7GtN9E%3D',
             'v2': updated_version,
-            'app_package_v2': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.2.0.0.sfpkg',
+            'app_package_v2': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.2.0.0.sfpkg?sp=r&st=2024-03-11T19:57:12Z&se=2024-04-07T03:57:12Z&sv=2022-11-02&sr=b&sig=gHhkx%2Fvd3ddWG5Nr%2FfZM8yuUqmlrL67j%2BZ3rxLLVf1k%3D',
             'app_name': self.create_random_name('testApp', 11),
             'stateful_service_type': 'VotingDataType',
             'stateless_service_type': 'VotingWebType',
@@ -181,9 +181,9 @@ class ServiceFabricManagedApplicationTests(ScenarioTest):
             'vm_password': self.create_random_name('Pass@', 9),
             'app_type_name': 'VotingType',
             'v1': '1.0.0',
-            'app_package_v1': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.sfpkg',
+            'app_package_v1': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.sfpkg?sp=r&st=2024-03-11T19:56:24Z&se=2024-04-07T03:56:24Z&sv=2022-11-02&sr=b&sig=hi56byw0jYpSLnJtMNemqHe92cZTMJgMHyeGa7GtN9E%3D',
             'v2': '2.0.0',
-            'app_package_v2': 'https://sfmconeboxst.blob.core.windows.net/managed-application-deployment/Voting.2.0.0.sfpkg',
+            'app_package_v2': 'https://azclistaccounttest.blob.core.windows.net/azclicont/Voting.2.0.0.sfpkg?sp=r&st=2024-03-11T19:57:12Z&se=2024-04-07T03:57:12Z&sv=2022-11-02&sr=b&sig=gHhkx%2Fvd3ddWG5Nr%2FfZM8yuUqmlrL67j%2BZ3rxLLVf1k%3D',
             'app_name': self.create_random_name('testApp', 11),
             'stateful_service_type': 'VotingDataType',
             'stateless_service_type': 'VotingWebType',

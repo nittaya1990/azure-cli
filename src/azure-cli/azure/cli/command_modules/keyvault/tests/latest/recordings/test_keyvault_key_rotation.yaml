@@ -13,21 +13,21 @@ interactions:
       ParameterSetName:
       - -n -g
       User-Agent:
-      - AZURECLI/2.29.1 azsdk-python-azure-mgmt-keyvault/9.1.0 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.53.1 azsdk-python-azure-mgmt-keyvault/10.3.0 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2021-06-01-preview
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2023-02-01
   response:
     body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2021-10-25T05:42:26.499Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-10-25T05:42:26.499Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["get","create","delete","list","update","import","backup","restore","recover"],"secrets":["get","list","set","delete","backup","restore","recover"],"certificates":["get","list","delete","create","import","update","managecontacts","getissuers","listissuers","setissuers","deleteissuers","manageissuers","recover"],"storage":["get","list","delete","set","update","regeneratekey","setsas","listsas","getsas","deletesas"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded"}}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2023-11-06T12:56:44.45Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-11-06T12:56:44.45Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["all"],"secrets":["all"],"certificates":["all"],"storage":["all"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded","publicNetworkAccess":"Enabled"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '1387'
+      - '1011'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:03 GMT
+      - Mon, 06 Nov 2023 12:57:19 GMT
       expires:
       - '-1'
       pragma:
@@ -45,9 +45,7 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-service-version:
-      - 1.5.166.0
-      x-powered-by:
-      - ASP.NET
+      - 1.5.969.1
     status:
       code: 200
       message: OK
@@ -63,65 +61,23 @@ interactions:
       Connection:
       - keep-alive
       ParameterSetName:
-      - -n --object-id --key-permissions
+      - -n -g --object-id --key-permissions
       User-Agent:
-      - AZURECLI/2.29.1 azsdk-python-azure-mgmt-keyvault/9.1.0 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.53.1 azsdk-python-azure-mgmt-keyvault/10.3.0 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resources?$filter=resourceType%20eq%20%27Microsoft.KeyVault%2Fvaults%27&api-version=2015-11-01
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2023-02-01
   response:
     body:
-      string: '{"value":[{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/python-sdk-test/providers/Microsoft.KeyVault/vaults/python-devops-key","name":"python-devops-key","type":"Microsoft.KeyVault/vaults","location":"eastus","tags":{}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/python-sdk-test/providers/Microsoft.KeyVault/vaults/SDKAutoPipelineSecrets","name":"SDKAutoPipelineSecrets","type":"Microsoft.KeyVault/vaults","location":"eastus","tags":{}},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/yishitest/providers/Microsoft.KeyVault/vaults/ystestkv","name":"ystestkv","type":"Microsoft.KeyVault/vaults","location":"eastus","tags":{}}]}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2023-11-06T12:56:44.45Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-11-06T12:56:44.45Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["all"],"secrets":["all"],"certificates":["all"],"storage":["all"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded","publicNetworkAccess":"Enabled"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '1024'
+      - '1011'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:03 GMT
-      expires:
-      - '-1'
-      pragma:
-      - no-cache
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains
-      vary:
-      - Accept-Encoding
-      x-content-type-options:
-      - nosniff
-    status:
-      code: 200
-      message: OK
-- request:
-    body: null
-    headers:
-      Accept:
-      - application/json
-      Accept-Encoding:
-      - gzip, deflate
-      CommandName:
-      - keyvault set-policy
-      Connection:
-      - keep-alive
-      ParameterSetName:
-      - -n --object-id --key-permissions
-      User-Agent:
-      - AZURECLI/2.29.1 azsdk-python-azure-mgmt-keyvault/9.1.0 Python/3.7.9 (Windows-10-10.0.19041-SP0)
-    method: GET
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2021-06-01-preview
-  response:
-    body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2021-10-25T05:42:26.499Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-10-25T05:42:26.499Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["get","create","delete","list","update","import","backup","restore","recover"],"secrets":["get","list","set","delete","backup","restore","recover"],"certificates":["get","list","delete","create","import","update","managecontacts","getissuers","listissuers","setissuers","deleteissuers","manageissuers","recover"],"storage":["get","list","delete","set","update","regeneratekey","setsas","listsas","getsas","deletesas"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded"}}'
-    headers:
-      cache-control:
-      - no-cache
-      content-length:
-      - '1387'
-      content-type:
-      - application/json; charset=utf-8
-      date:
-      - Mon, 25 Oct 2021 05:43:07 GMT
+      - Mon, 06 Nov 2023 12:57:22 GMT
       expires:
       - '-1'
       pragma:
@@ -139,9 +95,7 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-service-version:
-      - 1.5.166.0
-      x-powered-by:
-      - ASP.NET
+      - 1.5.969.1
     status:
       code: 200
       message: OK
@@ -149,15 +103,10 @@ interactions:
     body: '{"location": "eastus2", "tags": {}, "properties": {"tenantId": "54826b22-38d6-4fb2-bad9-b7b93a3e9c5a",
       "sku": {"family": "A", "name": "standard"}, "accessPolicies": [{"tenantId":
       "54826b22-38d6-4fb2-bad9-b7b93a3e9c5a", "objectId": "3707fb2f-ac10-4591-a04f-8b0d786ea37d",
-      "permissions": {"keys": ["create", "backup", "rotate", "get", "import", "recover",
-      "update", "delete", "restore", "list"], "secrets": ["get", "list", "set", "delete",
-      "backup", "restore", "recover"], "certificates": ["get", "list", "delete", "create",
-      "import", "update", "managecontacts", "getissuers", "listissuers", "setissuers",
-      "deleteissuers", "manageissuers", "recover"], "storage": ["get", "list", "delete",
-      "set", "update", "regeneratekey", "setsas", "listsas", "getsas", "deletesas"]}}],
-      "vaultUri": "https://cli-test-kv-key-000002.vault.azure.net/", "enabledForDeployment":
-      false, "enableSoftDelete": true, "softDeleteRetentionInDays": 7, "provisioningState":
-      "Succeeded"}}'
+      "permissions": {"keys": ["rotate", "all"], "secrets": ["all"], "certificates":
+      ["all"], "storage": ["all"]}}], "vaultUri": "https://cli-test-kv-key-000002.vault.azure.net/",
+      "enabledForDeployment": false, "enableSoftDelete": true, "softDeleteRetentionInDays":
+      7, "provisioningState": "Succeeded", "publicNetworkAccess": "Enabled"}}'
     headers:
       Accept:
       - application/json
@@ -168,27 +117,27 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '957'
+      - '602'
       Content-Type:
       - application/json
       ParameterSetName:
-      - -n --object-id --key-permissions
+      - -n -g --object-id --key-permissions
       User-Agent:
-      - AZURECLI/2.29.1 azsdk-python-azure-mgmt-keyvault/9.1.0 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - AZURECLI/2.53.1 azsdk-python-azure-mgmt-keyvault/10.3.0 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2021-06-01-preview
+    uri: https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002?api-version=2023-02-01
   response:
     body:
-      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2021-10-25T05:42:26.499Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2021-10-25T05:43:08.325Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["create","backup","rotate","get","import","recover","update","delete","restore","list"],"secrets":["get","list","set","delete","backup","restore","recover"],"certificates":["get","list","delete","create","import","update","managecontacts","getissuers","listissuers","setissuers","deleteissuers","manageissuers","recover"],"storage":["get","list","delete","set","update","regeneratekey","setsas","listsas","getsas","deletesas"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded"}}'
+      string: '{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/cli_test_keyvault_key000001/providers/Microsoft.KeyVault/vaults/cli-test-kv-key-000002","name":"cli-test-kv-key-000002","type":"Microsoft.KeyVault/vaults","location":"eastus2","tags":{},"systemData":{"createdBy":"yishiwang@microsoft.com","createdByType":"User","createdAt":"2023-11-06T12:56:44.45Z","lastModifiedBy":"yishiwang@microsoft.com","lastModifiedByType":"User","lastModifiedAt":"2023-11-06T12:57:22.657Z"},"properties":{"sku":{"family":"A","name":"standard"},"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","accessPolicies":[{"tenantId":"54826b22-38d6-4fb2-bad9-b7b93a3e9c5a","objectId":"3707fb2f-ac10-4591-a04f-8b0d786ea37d","permissions":{"keys":["rotate","all"],"secrets":["all"],"certificates":["all"],"storage":["all"]}}],"enabledForDeployment":false,"enableSoftDelete":true,"softDeleteRetentionInDays":7,"vaultUri":"https://cli-test-kv-key-000002.vault.azure.net/","provisioningState":"Succeeded","publicNetworkAccess":"Enabled"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '1396'
+      - '1021'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:08 GMT
+      - Mon, 06 Nov 2023 12:57:22 GMT
       expires:
       - '-1'
       pragma:
@@ -206,11 +155,9 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-service-version:
-      - 1.5.166.0
+      - 1.5.969.1
       x-ms-ratelimit-remaining-subscription-writes:
       - '1199'
-      x-powered-by:
-      - ASP.NET
     status:
       code: 200
       message: OK
@@ -228,9 +175,9 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/create?api-version=7.3-preview
+    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/create?api-version=7.5-preview.1
   response:
     body:
       string: '{"error":{"code":"Unauthorized","message":"AKV10000: Request is missing
@@ -243,7 +190,7 @@ interactions:
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:11 GMT
+      - Mon, 06 Nov 2023 12:57:24 GMT
       expires:
       - '-1'
       pragma:
@@ -251,18 +198,16 @@ interactions:
       strict-transport-security:
       - max-age=31536000;includeSubDomains
       www-authenticate:
-      - Bearer authorization="https://login.windows.net/54826b22-38d6-4fb2-bad9-b7b93a3e9c5a",
+      - Bearer authorization="https://login.microsoftonline.com/54826b22-38d6-4fb2-bad9-b7b93a3e9c5a",
         resource="https://vault.azure.net"
       x-content-type-options:
       - nosniff
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.255.83;act_addr_fam=InterNetwork;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=InterNetwork;
       x-ms-keyvault-region:
       - eastus2
       x-ms-keyvault-service-version:
-      - 1.9.150.1
-      x-powered-by:
-      - ASP.NET
+      - 1.9.1054.1
     status:
       code: 401
       message: Unauthorized
@@ -280,21 +225,21 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/create?api-version=7.3-preview
+    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/create?api-version=7.5-preview.1
   response:
     body:
-      string: '{"key":{"kid":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/59688cd2a3dd4258a9668ebe6fa998c3","kty":"RSA","key_ops":["encrypt","decrypt","sign","verify","wrapKey","unwrapKey"],"n":"vMb58jXq8ns_3ARjpiFANy_qFYeW0Azvw5MilVUsLpCo1aCMclNcQuVn7sQf6utQ0B4LwsLH0_BsJwhfU47wkwoUs14MiFVFV_IkTxIPy0JCcBklQWlmJB-lL5W5B2yB_6-MKmK145L-9gD4UQCY3XDn67YJAfmn8yTdVbHC58MNw2w_asdb1_qmUlWA7LYvZEC7GCLzzDbNqRppjZIc-SYfOzfW9V2a7K-LAzvjV2tUtPaFjyk0zcbMZolYl-vw3UMjTSizVhLalhyNeJThMuk1Ke95syDgALT0bqtySepK01_Vb_iaDCT0A7Ty2N3cYtBtx7HyGlfGCvpvlTFFtQ","e":"AQAB"},"attributes":{"enabled":true,"created":1635140592,"updated":1635140592,"recoveryLevel":"CustomizedRecoverable+Purgeable","recoverableDays":7}}'
+      string: '{"key":{"kid":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/95a76f34842c4fcf9e2cc929e38359c0","kty":"RSA","key_ops":["encrypt","decrypt","sign","verify","wrapKey","unwrapKey"],"n":"wOYUqZNZTuxcilIWCZE_fwqQxnrU99hgEa8yhxLtUCwF9d5eRS0WrjfTNCZmuwnOrCZO8VktkPNFgOneY3QBBgqlHpcHGFybN4y-ojwAlSArRM7l1eKFOGu_Lb9b_VEN8hd5S7QSxxQPufoX6kzRzZgsBS76Mpr4DCN4KNtWiYzFKbNCoLGk4qDL6mmc3B5q6Q41-ObDq45zdD-zpOiCcDr_iIX-haKEpM5B2oamysBgm91oE56nuqolL-vmn9JefVtL5vCEj_UfeEwD7Bv2_iZw02YVqPl_52hG2htHRNlhZPmkXc66lQRTSfUtep5w_50HC9baF4ZwUpRNDWsBZQ","e":"AQAB"},"attributes":{"enabled":true,"created":1699275444,"updated":1699275444,"recoveryLevel":"CustomizedRecoverable+Purgeable","recoverableDays":7,"exportable":false,"hsmPlatform":"0"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '713'
+      - '734'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:12 GMT
+      - Mon, 06 Nov 2023 12:57:24 GMT
       expires:
       - '-1'
       pragma:
@@ -304,20 +249,18 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.255.83;act_addr_fam=InterNetwork;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=InterNetwork;
       x-ms-keyvault-region:
       - eastus2
       x-ms-keyvault-service-version:
-      - 1.9.150.1
-      x-powered-by:
-      - ASP.NET
+      - 1.9.1054.1
     status:
       code: 200
       message: OK
 - request:
-    body: '{"lifetimeActions": [{"trigger": {"timeBeforeExpiry": "P7D"}, "action":
-      {"type": "Notify"}}, {"trigger": {"timeAfterCreate": "P15D"}, "action": {"type":
-      "Rotate"}}], "attributes": {"expiryTime": "P30D"}}'
+    body: '{"lifetimeActions": [{"trigger": {"timeAfterCreate": "P15D"}, "action":
+      {"type": "Rotate"}}, {"trigger": {"timeBeforeExpiry": "P7D"}, "action": {"type":
+      "Notify"}}], "attributes": {"expiryTime": "P30D"}}'
     headers:
       Accept:
       - application/json
@@ -330,21 +273,21 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: PUT
-    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy?api-version=7.3-preview
+    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy?api-version=7.5-preview.1
   response:
     body:
-      string: '{"id":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy","lifetimeActions":[{"trigger":{"timeAfterCreate":"P15D"},"action":{"type":"Rotate"}},{"trigger":{"timeBeforeExpiry":"P7D"},"action":{"type":"Notify"}}],"attributes":{"expiryTime":"P30D","created":1635140594,"updated":1635140594}}'
+      string: '{"id":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy","lifetimeActions":[{"trigger":{"timeAfterCreate":"P15D"},"action":{"type":"Rotate"}},{"trigger":{"timeBeforeExpiry":"P7D"},"action":{"type":"Notify"}}],"attributes":{"expiryTime":"P30D","created":1699275446,"updated":1699275446}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '331'
+      - '315'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:14 GMT
+      - Mon, 06 Nov 2023 12:57:25 GMT
       expires:
       - '-1'
       pragma:
@@ -354,13 +297,11 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.255.83;act_addr_fam=InterNetwork;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=InterNetwork;
       x-ms-keyvault-region:
       - eastus2
       x-ms-keyvault-service-version:
-      - 1.9.150.1
-      x-powered-by:
-      - ASP.NET
+      - 1.9.1054.1
     status:
       code: 200
       message: OK
@@ -374,21 +315,21 @@ interactions:
       Connection:
       - keep-alive
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: GET
-    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy?api-version=7.3-preview
+    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy?api-version=7.5-preview.1
   response:
     body:
-      string: '{"id":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy","lifetimeActions":[{"trigger":{"timeAfterCreate":"P15D"},"action":{"type":"Rotate"}},{"trigger":{"timeBeforeExpiry":"P7D"},"action":{"type":"Notify"}}],"attributes":{"expiryTime":"P30D","created":1635140594,"updated":1635140594}}'
+      string: '{"id":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotationpolicy","lifetimeActions":[{"trigger":{"timeAfterCreate":"P15D"},"action":{"type":"Rotate"}},{"trigger":{"timeBeforeExpiry":"P7D"},"action":{"type":"Notify"}}],"attributes":{"expiryTime":"P30D","created":1699275446,"updated":1699275446}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '331'
+      - '315'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:16 GMT
+      - Mon, 06 Nov 2023 12:57:28 GMT
       expires:
       - '-1'
       pragma:
@@ -398,13 +339,11 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.255.83;act_addr_fam=InterNetwork;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=InterNetwork;
       x-ms-keyvault-region:
       - eastus2
       x-ms-keyvault-service-version:
-      - 1.9.150.1
-      x-powered-by:
-      - ASP.NET
+      - 1.9.1054.1
     status:
       code: 200
       message: OK
@@ -420,21 +359,21 @@ interactions:
       Content-Length:
       - '0'
       User-Agent:
-      - azsdk-python-keyvault-keys/4.5.0b4 Python/3.7.9 (Windows-10-10.0.19041-SP0)
+      - azsdk-python-keyvault-keys/4.9.0b3 Python/3.10.11 (Windows-10-10.0.22621-SP0)
     method: POST
-    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotate?api-version=7.3-preview
+    uri: https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/rotate?api-version=7.5-preview.1
   response:
     body:
-      string: '{"key":{"kid":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/7db508e70bf6450db2a3490951399544","kty":"RSA","key_ops":["encrypt","decrypt","sign","verify","wrapKey","unwrapKey"],"n":"qwVfDKCQjMkSPOHEPZewACkAenAev-AqcLMgSf53pLvMskeXdYCqWUa5KNH4eS7WLswtmC8ZDIH9eCoPhrZxSRCL48XZ194KcSngAe2KzTxRQFgKfEa_SUUCWohvcZ_PhrYQVru0k7F3z9z1M6bMZIK97yD28UQBCat8r3L50YyFKrifLmqw0qiS2WE9BcvJ0_FyPMb3T1VrOf7X52iBsVrDbTgdGTQBOMU2u2w5aTik0nvZjNYcX62QcYZHtErDz6TyJqZGxsxkjgCy7PZuUqp47cRLMBRQkQ_sxcKJakhq9OfMbNf7ThNu2H79NN-2RRksvEHMVc_neAmH8xP8-Q","e":"AQAB"},"attributes":{"enabled":true,"exp":1637732599,"created":1635140599,"updated":1635140599,"recoveryLevel":"CustomizedRecoverable+Purgeable","recoverableDays":7}}'
+      string: '{"key":{"kid":"https://cli-test-kv-key-000002.vault.azure.net/keys/key-000003/c947ea436e28413f81578c4c58ef3c91","kty":"RSA","key_ops":["encrypt","decrypt","sign","verify","wrapKey","unwrapKey"],"n":"4odxYFr8QYZsG7KTRkwvyw7GK4fEyXCHBauE9vSscwNVViao1RT6BI8s37YceaFi9tvWnwgr9UCKDJWbrZusRgGgtffCk11JrU0cz9ibCIVTvN4WIwCKWoTvnxol_DjljlgFrBcCWosBbsWnIs436JTh8LBJvJ3sIPf05XtHNJVR5uR8K2GbEAWVh7jYioi5QWn0-eYijlgzLHNDECldFSWvs-knIRwx8ANVvXGeqs7N0kFh84jTk_4wfiDcpgPCmTFQ63OCfp9xYMHPL9_ssKd2ZOM7ZKeatOf9Synl9n5pC9zlFoQWLQpyYBddQnTbS5znBP56_ac86DtHVvbA7Q","e":"AQAB"},"attributes":{"enabled":true,"exp":1701867450,"created":1699275450,"updated":1699275450,"recoveryLevel":"CustomizedRecoverable+Purgeable","recoverableDays":7,"exportable":false,"hsmPlatform":"0"}}'
     headers:
       cache-control:
       - no-cache
       content-length:
-      - '730'
+      - '751'
       content-type:
       - application/json; charset=utf-8
       date:
-      - Mon, 25 Oct 2021 05:43:18 GMT
+      - Mon, 06 Nov 2023 12:57:29 GMT
       expires:
       - '-1'
       pragma:
@@ -444,13 +383,11 @@ interactions:
       x-content-type-options:
       - nosniff
       x-ms-keyvault-network-info:
-      - conn_type=Ipv4;addr=167.220.255.83;act_addr_fam=InterNetwork;
+      - conn_type=Ipv4;addr=167.220.255.85;act_addr_fam=InterNetwork;
       x-ms-keyvault-region:
       - eastus2
       x-ms-keyvault-service-version:
-      - 1.9.150.1
-      x-powered-by:
-      - ASP.NET
+      - 1.9.1054.1
     status:
       code: 200
       message: OK
